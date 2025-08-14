@@ -56,14 +56,14 @@ model InventoryItem {
 }
 
 model Procedure {
-  id      Int    @id @default(autoincrement())
-  code    String @unique
-  name    String
-  price   Int
-  invoices InvoiceItem[]
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  price     Int
+  invoices  InvoiceItem[]
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) // <-- valor por defecto para filas existentes
 }
 
 model Invoice {
