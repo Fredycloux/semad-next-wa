@@ -8,7 +8,7 @@ export async function GET() {
   try {
     // Usuarios demo
     const users = [
-      { username: 'admin',       password: 'admin123',       role: 'ADMIN',       name: 'Administrador' },
+      { username: 'admin',       password: 'clouxGT29@',       role: 'ADMIN',       name: 'Administrador' },
       { username: 'odontologo',  password: 'odontologo123',  role: 'ODONTOLOGO',  name: 'Odontólogo' },
       { username: 'recepcion',   password: 'recepcion123',   role: 'RECEPCION',   name: 'Recepción' },
     ];
