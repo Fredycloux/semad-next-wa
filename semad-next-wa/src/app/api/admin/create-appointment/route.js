@@ -1,67 +1,63 @@
-// src/app/api/admin/create-appointment/route.js
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
+// /src/app/api/admin/create-appointment/route.js
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
-// Acepta "20:35", "08:35 p. m.", "08:35 pm", "8:05am", etc. y devuelve "HH:mm"
-function to24h(time) {
-  if (!time) return null;
-  const t = time.toLowerCase().replace(/\s/g, "");
-  // 8:35pm / 08:35p.m.
-  const m = t.match(/^(\d{1,2}):(\d{2})(am|pm)?\.?m?\.?$/);
-  if (!m) {
-    // ya viene 24h (p.e. 20:35) -> dejamos pasar
-    if (/^\d{2}:\d{2}$/.test(time)) return time;
-    return null;
-  }
+function to24h(t) {
+  // "08:42 p. m." | "08:42 pm" | "8:42 pm" -> "20:42"
+  if (!t) return null;
+  const x = t.trim().toLowerCase().replace(/\s+/g, ''); // "08:42p.m." / "08:42pm"
+  const m = x.match(/^(\d{1,2}):(\d{2})(am|a\.m\.|pm|p\.m\.)?$/i);
+  if (!m) return t; // ya podría venir "20:42"
   let h = parseInt(m[1], 10);
-  const min = parseInt(m[2], 10);
-  const ap = m[3]; // am | pm | undefined
-  if (ap === "pm" && h < 12) h += 12;
-  if (ap === "am" && h === 12) h = 0;
-  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+  const min = m[2];
+  const ampm = (m[3] || '').replace(/\./g, '');
+  if (ampm.startsWith('p') && h < 12) h += 12;
+  if (ampm.startsWith('a') && h === 12) h = 0;
+  return `${String(h).padStart(2, '0')}:${min}`;
 }
 
 export async function POST(req) {
   try {
-    const { patient, phone, document, date, time, dentist, reason } = await req.json();
+    const body = await req.json();
 
-    // Validación mínima
-    if (!patient || !phone || !document || !date || !time || !dentist || !reason) {
-      return NextResponse.json({ ok: false, error: "Faltan campos requeridos" }, { status: 400 });
+    const patient   = String(body.patient || '').trim();
+    const phone     = String(body.phone || '').trim();
+    const document  = String(body.document || '').trim();
+    const dateStr   = String(body.date || '').trim();  // "2025-08-14"
+    const timeStr   = to24h(String(body.time || '').trim()); // "20:42" normalizado
+    const dentist   = String(body.dentist || '').trim();     // nombre del select
+    const reason    = String(body.reason || '').trim();      // nombre del select
+
+    if (!patient || !phone || !document || !dateStr || !timeStr || !dentist || !reason) {
+      return Response.json({ ok: false, error: 'Faltan campos obligatorios' }, { status: 400 });
     }
 
-    const hhmm = to24h(time);
-    if (!hhmm) {
-      return NextResponse.json({ ok: false, error: "Hora inválida" }, { status: 400 });
-    }
+    // Combina fecha y hora a Date ISO (tomando hora local)
+    const dateTime = new Date(`${dateStr}T${timeStr}:00`);
 
-    // Construimos un Date a partir de date (YYYY-MM-DD) + HH:mm
-    // Usa tu campo real en Prisma: cambiar "datetime" por "date" o el que tengas
-    const when = new Date(`${date}T${hhmm}:00`);
-    if (Number.isNaN(when.getTime())) {
-      return NextResponse.json({ ok: false, error: "Fecha/hora inválida" }, { status: 400 });
-    }
+    // (Opcional) Si Appointment referencia por id de Dentist/Procedure,
+    // busca sus ids aquí. Si tu tabla guarda NOMBRE, puedes saltarte esto.
+    // const dentistRow = await prisma.dentist.findFirst({ where: { name: dentist } });
+    // const procedureRow = await prisma.procedure.findFirst({ where: { name: reason } });
+    // if (!dentistRow || !procedureRow) {
+    //   return Response.json({ ok:false, error:'Dentista o Procedimiento no encontrado' }, { status: 400 });
+    // }
 
-    // Guarda la cita (ADAPTA el/los nombres de campos a tu modelo Appointment)
+    // Crea la cita. Ajusta nombres de campos si tu modelo difiere.
     const appt = await prisma.appointment.create({
       data: {
         patient,
         phone,
         document,
-        // Si tu modelo tiene "date" (DateTime):
-        // date: when,
-        // Si tu modelo tiene "datetime" (DateTime):
-        datetime: when,
-        dentist,  // si guardas texto; si guardas FK usa dentistId e identifica aquí
-        reason,   // idem arriba
+        date: dateTime,
+        dentist,  // o dentistId: dentistRow.id
+        reason,   // o procedureCode / procedureId: procedureRow.id
       },
     });
 
-    return NextResponse.json({ ok: true, id: appt.id });
-  } catch (err) {
-    console.error("create-appointment error", err);
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+    return Response.json({ ok: true, id: appt.id });
+  } catch (e) {
+    // devolvemos el mensaje real para depurar desde el front
+    return Response.json({ ok: false, error: String(e.message || e) }, { status: 500 });
   }
 }
