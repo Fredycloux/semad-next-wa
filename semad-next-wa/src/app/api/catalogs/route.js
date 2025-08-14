@@ -1,29 +1,27 @@
-// src/app/api/catalogs/route.js
-import { PrismaClient } from '@prisma/client';
+// /src/app/api/catalogs/route.js
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
-
-// evita cacheo de rutas app (para que siempre traiga lo último)
-export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // Odontólogos activos
     const dentists = await prisma.dentist.findMany({
       where: { active: true },
-      orderBy: { name: 'asc' },
       select: { id: true, name: true },
+      orderBy: { name: "asc" },
     });
 
-    // Procedimientos activos
     const procedures = await prisma.procedure.findMany({
       where: { active: true },
-      orderBy: { name: 'asc' },
       select: { id: true, name: true },
+      orderBy: { name: "asc" },
     });
 
-    return Response.json({ dentists, procedures });
-  } catch (e) {
-    // Fallback seguro (vacío) si algo falla
-    return Response.json({ dentists: [], procedures: [] }, { status: 200 });
+    return Response.json({
+      dentists: dentists.map(d => ({ id: d.id, name: d.name })),
+      procedures: procedures.map(p => ({ id: p.id, name: p.name })),
+    });
+  } catch {
+    // Devuelve arrays vacíos si algo falla para no romper el form
+    return Response.json({ dentists: [], procedures: [] });
   }
 }
