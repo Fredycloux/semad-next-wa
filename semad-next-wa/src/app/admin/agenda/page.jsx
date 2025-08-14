@@ -3,10 +3,6 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
-export const metadata = {
-  title: "Agendamiento de citas | SEMAD",
-};
-
 export default function CreateAppointmentPage() {
   const [dentists, setDentists] = useState([]);
   const [procedures, setProcedures] = useState([]);
