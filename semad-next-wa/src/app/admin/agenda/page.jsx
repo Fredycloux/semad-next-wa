@@ -1,125 +1,83 @@
 "use client";
-
 import { useEffect, useState } from "react";
 
-export default function AgendaAdminPage() {
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
+export default function CreateAppointmentPage() {
   const [dentists, setDentists] = useState([]);
   const [procedures, setProcedures] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [d1, d2] = await Promise.all([
-          fetch("/api/admin/dentists").then((r) => r.json()),
-          fetch("/api/admin/procedures").then((r) => r.json()),
-        ]);
-        setDentists(d1.items ?? []);
-        setProcedures(d2.items ?? []);
-      } catch {
-        setDentists([]);
-        setProcedures([]);
-      }
-    })();
+    fetch("/api/catalogs")
+      .then((r) => r.json())
+      .then((data) => {
+        setDentists(data.dentists || []);
+        setProcedures(data.procedures || []);
+      })
+      .catch(() => {});
   }, []);
 
   async function onSubmit(e) {
     e.preventDefault();
-    setMsg("");
     setLoading(true);
-    const fd = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(fd.entries());
 
-    try {
-      const res = await fetch("/api/admin/create-appointment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data?.error || "No se pudo crear la cita");
-      setMsg("✅ Cita creada correctamente.");
-      e.currentTarget.reset();
-    } catch (err) {
-      setMsg(`❌ ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      patient: fd.get("patient"),
+      phone: fd.get("phone"),
+      document: fd.get("document"),
+      date: fd.get("date"),
+      time: fd.get("time"),
+      dentist: fd.get("dentist"),     // ahora viene del select
+      reason: fd.get("reason"),       // ahora viene del select
+    };
+
+    const res = await fetch("/api/admin/create-appointment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json();
+    setLoading(false);
+    if (json.ok) alert("Cita creada");
+    else alert("Error al crear cita");
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-white p-4">
-      <div className="mx-auto w-full max-w-3xl rounded-2xl border bg-white/70 p-6 shadow-sm backdrop-blur">
-        <div className="mb-6 flex items-center gap-3">
-          <img src="/logo_semad.png" alt="SEMAD" className="h-8 w-8" />
-          <div>
-            <h1 className="text-lg font-semibold">Crear cita</h1>
-            <p className="text-sm text-gray-500">Registra los datos del paciente y agenda su cita.</p>
-          </div>
-        </div>
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto space-y-4 p-4">
+      {/* Paciente */}
+      <input name="patient" placeholder="Paciente (nombre completo)" className="w-full border rounded-lg px-3 py-2" required />
+      {/* Teléfono */}
+      <input name="phone" placeholder="573001234567" className="w-full border rounded-lg px-3 py-2" required />
+      {/* Documento */}
+      <input name="document" placeholder="Documento" className="w-full border rounded-lg px-3 py-2" required />
+      {/* Fecha y Hora */}
+      <input name="date" type="date" className="w-full border rounded-lg px-3 py-2" required />
+      <input name="time" type="time" className="w-full border rounded-lg px-3 py-2" required />
 
-        {msg && (
-          <div className="mb-4 rounded-lg border px-3 py-2 text-sm border-violet-100 bg-violet-50 text-violet-700">
-            {msg}
-          </div>
-        )}
+      {/* Odontólogo (select) */}
+      <select name="dentist" className="w-full border rounded-lg px-3 py-2" required>
+        <option value="">Selecciona odontólogo...</option>
+        {dentists.map(d => (
+          <option key={d.id} value={d.name}>{d.name}</option>
+        ))}
+      </select>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Paciente (nombre completo)</label>
-              <input name="patient" required className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Teléfono (con 57)</label>
-              <input name="phone" required className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" placeholder="573001234567" />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Documento</label>
-              <input name="document" required className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium">Fecha</label>
-                <input type="date" name="date" required className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Hora</label>
-                <input type="time" name="time" required className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" />
-              </div>
-            </div>
-          </div>
+      {/* Motivo/Procedimiento (select) */}
+      <select name="reason" className="w-full border rounded-lg px-3 py-2" required>
+        <option value="">Selecciona procedimiento...</option>
+        {procedures.map(p => (
+          <option key={p.id} value={p.name}>{p.name}</option>
+        ))}
+      </select>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">Odontólogo</label>
-            <select name="dentist" required defaultValue="" className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300">
-              <option value="" disabled>Selecciona un odontólogo</option>
-              {dentists.map((d) => <option key={d.id} value={d.name}>{d.name}</option>)}
-            </select>
-          </div>
+      <button disabled={loading} className="rounded-lg bg-violet-600 text-white px-4 py-2">
+        {loading ? "Creando..." : "Crear cita"}
+      </button>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">Motivo</label>
-            <select name="reason" required defaultValue="" className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300">
-              <option value="" disabled>Selecciona el motivo</option>
-              {procedures.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-gradient-to-r from-fuchsia-500 to-violet-600 px-4 py-2 font-semibold text-white hover:opacity-95 disabled:opacity-60"
-          >
-            {loading ? "Creando…" : "Crear cita"}
-          </button>
-        </form>
-
-        <p className="mt-4 text-xs text-gray-500">
-          Recordatorio de WhatsApp: si configuraste el token y el cron, el paciente recibirá un mensaje automático el día anterior.
-        </p>
-      </div>
-    </div>
+      <p className="text-xs text-gray-500">
+        Recordatorio de WhatsApp: si configuras el token y el cron, el paciente recibirá un mensaje automático el día anterior.
+      </p>
+    </form>
   );
 }
