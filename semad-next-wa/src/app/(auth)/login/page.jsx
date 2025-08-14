@@ -1,30 +1,33 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
-import Image from "next/image";
-// o si creaste el componente: import Logo from "@/components/Logo";
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { signIn } from 'next-auth/react'
+import Image from 'next/image'
 
-export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const search = useSearchParams();
-  const error = search.get("error");
+// Evita el prerender estático y el error de useSearchParams
+export const dynamic = 'force-dynamic'
+
+// Componente con los hooks (queda dentro de <Suspense>)
+function LoginForm() {
+  const [loading, setLoading] = useState(false)
+  const search = useSearchParams()
+  const error = search.get('error')
 
   async function onSubmit(e) {
-    e.preventDefault();
-    setLoading(true);
-    const fd = new FormData(e.currentTarget);
-    const username = fd.get("username");
-    const password = fd.get("password");
+    e.preventDefault()
+    setLoading(true)
+    const fd = new FormData(e.currentTarget)
+    const username = fd.get('username')
+    const password = fd.get('password')
 
-    await signIn("credentials", {
+    await signIn('credentials', {
       username,
       password,
       redirect: true,
-      callbackUrl: "/admin/agenda",
-    });
-    setLoading(false);
+      callbackUrl: '/admin/agenda',
+    })
+    setLoading(false)
   }
 
   return (
@@ -33,7 +36,6 @@ export default function LoginPage() {
         {/* SOLO LOGO */}
         <div className="flex justify-center mb-4">
           <Image src="/logo_semad.png" alt="SEMAD" width={84} height={84} priority />
-          {/* o <Logo size={84} /> */}
         </div>
 
         {error && (
@@ -70,15 +72,23 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full rounded-lg bg-gradient-to-r from-fuchsia-500 to-violet-600 px-4 py-2 font-semibold text-white hover:opacity-95 disabled:opacity-60"
           >
-            {loading ? "Entrando…" : "Entrar"}
+            {loading ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
 
         <p className="mt-4 text-center text-xs text-gray-500">
-          Después del despliegue, visita <code>/api/seed</code> para crear los
-          usuarios demo.
+          Sistemas de gestión SEMAD - Consultorio Odontológico.
         </p>
       </div>
     </div>
-  );
+  )
+}
+
+// Página: envuelve el formulario en <Suspense>
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  )
 }
