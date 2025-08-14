@@ -4,3 +4,8 @@
 
 /* estilos mínimos opcionales */
 html, body { height: 100%; }
+
+/* globals.css */
+.body-soft {
+  @apply min-h-screen bg-gradient-to-b from-violet-50 via-white to-white;
+}
