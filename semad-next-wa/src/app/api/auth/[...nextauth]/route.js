@@ -1,53 +1,73 @@
-// src/app/api/auth/[...nextauth]/route.js
+// src/app/(auth)/[...nextauth]/route.js
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+export const runtime = "nodejs";        // 👈 fuerza Node.js (no edge)
+export const dynamic = "force-dynamic"; // evita cachés agresivas
+
 const prisma = new PrismaClient();
 
-export const authOptions = {
+const authOptions = {
   session: { strategy: "jwt" },
-  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     Credentials({
+      id: "credentials",
       name: "credentials",
-      credentials: { username: {}, password: {} },
-      async authorize(credentials) {
-        const { username, password } = credentials || {};
-        if (!username || !password) return null;
+      credentials: {
+        username: { label: "Usuario", type: "text" },
+        password: { label: "Contraseña", type: "password" },
+      },
+      authorize: async (credentials) => {
+        try {
+          if (!credentials?.username || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({ where: { username } });
-        if (!user) return null;
+          const user = await prisma.user.findUnique({
+            where: { username: credentials.username },
+          });
 
-        const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) return null;
+          if (!user || !user.passwordHash) return null;
 
-        return {
-          id: user.id.toString(),
-          username: user.username,
-          name: user.name,
-          role: user.role,
-        };
+          const ok = await bcrypt.compare(
+            credentials.password,
+            user.passwordHash
+          );
+
+          if (!ok) return null;
+
+          return {
+            id: String(user.id),
+            name: user.name,
+            username: user.username,
+            role: user.role,
+          };
+        } catch (e) {
+          // Si algo falla, devuelve null para "Credenciales inválidas"
+          return null;
+        }
       },
     }),
   ],
-  pages: { signIn: "/login", error: "/login" },
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.username = user.username;
-        token.name = user.name;
+        token.id = user.id;
         token.role = user.role;
+        token.username = user.username;
       }
       return token;
     },
     async session({ session, token }) {
-      session.user = {
-        username: token.username,
-        name: token.name,
-        role: token.role,
-      };
+      if (session.user && token) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+        session.user.username = token.username;
+      }
       return session;
     },
   },
