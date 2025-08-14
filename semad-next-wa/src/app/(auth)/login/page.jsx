@@ -1,86 +1,84 @@
-'use client';
-import Image from 'next/image';
-import { Suspense, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+"use client";
 
-function LoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const errorMsg = searchParams.get('error');
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
+import Image from "next/image";
+// o si creaste el componente: import Logo from "@/components/Logo";
+
+export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const search = useSearchParams();
+  const error = search.get("error");
 
   async function onSubmit(e) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
     setLoading(true);
-    const res = await signIn('credentials', {
-      redirect: false,
-      username: fd.get('username'),
-      password: fd.get('password'),
+    const fd = new FormData(e.currentTarget);
+    const username = fd.get("username");
+    const password = fd.get("password");
+
+    await signIn("credentials", {
+      username,
+      password,
+      redirect: true,
+      callbackUrl: "/admin/agenda",
     });
     setLoading(false);
-    if (!res || res.error) {
-      router.push('/login?error=Credenciales%20inv%C3%A1lidas');
-      return;
-    }
-    router.push('/admin/agenda');
   }
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border bg-white p-6 shadow">
-      <div className="mb-4 flex items-center justify-center gap-2">
-        <Image src="/logo_semad.png" alt="SEMAD" width={48} height={48} />
-        <div className="text-xl font-bold">SEMAD</div>
+    <div className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-white flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white/70 backdrop-blur rounded-2xl shadow-sm border p-6">
+        {/* SOLO LOGO */}
+        <div className="flex justify-center mb-4">
+          <Image src="/logo_semad.png" alt="SEMAD" width={84} height={84} priority />
+          {/* o <Logo size={84} /> */}
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
+            Credenciales inválidas
+          </div>
+        )}
+
+        <form className="space-y-4" onSubmit={onSubmit}>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Usuario</label>
+            <input
+              name="username"
+              autoComplete="username"
+              placeholder="admin"
+              className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Contraseña</label>
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-gradient-to-r from-fuchsia-500 to-violet-600 px-4 py-2 font-semibold text-white hover:opacity-95 disabled:opacity-60"
+          >
+            {loading ? "Entrando…" : "Entrar"}
+          </button>
+        </form>
+
+        <p className="mt-4 text-center text-xs text-gray-500">
+          Después del despliegue, visita <code>/api/seed</code> para crear los
+          usuarios demo.
+        </p>
       </div>
-
-      {errorMsg && (
-        <div className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">
-          {decodeURIComponent(errorMsg)}
-        </div>
-      )}
-
-      <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <label className="block text-sm font-medium">Usuario</label>
-          <input
-            name="username"
-            defaultValue="admin"
-            className="mt-1 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-fuchsia-500"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">Contraseña</label>
-          <input
-            name="password"
-            type="password"
-            defaultValue="admin123"
-            className="mt-1 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-fuchsia-500"
-            required
-          />
-        </div>
-        <button
-          disabled={loading}
-          className="mt-2 w-full rounded-md bg-gradient-to-r from-fuchsia-600 to-indigo-600 px-4 py-2 font-semibold text-white disabled:opacity-60"
-        >
-          {loading ? 'Entrando…' : 'Entrar'}
-        </button>
-      </form>
-
-      <p className="mt-4 text-center text-xs text-gray-500">
-        Después del despliegue, visita <code>/api/seed</code> para crear los usuarios demo.
-      </p>
-    </div>
-  );
-}
-
-export default function Page() {
-  return (
-    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-fuchsia-100 via-purple-100 to-indigo-100 p-4">
-      <Suspense fallback={<div>Cargando…</div>}>
-        <LoginForm />
-      </Suspense>
     </div>
   );
 }
