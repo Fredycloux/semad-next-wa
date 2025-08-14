@@ -56,9 +56,9 @@ model InventoryItem {
 }
 
 model Procedure {
-  id      Int @id @default(autoincrement())
-  code    String @id
-  name    String @unique
+  id      Int    @id @default(autoincrement())
+  code    String @unique
+  name    String
   price   Int
   invoices InvoiceItem[]
   active    Boolean  @default(true)
