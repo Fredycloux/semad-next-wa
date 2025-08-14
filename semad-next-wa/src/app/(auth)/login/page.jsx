@@ -1,72 +1,86 @@
-"use client";
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+'use client';
+import Image from 'next/image';
+import { Suspense, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 
-export default function LoginPage() {
-  const [username, setU] = useState("");
-  const [password, setP] = useState("");
-  const [loading, setL] = useState(false);
-  const err = useSearchParams().get("error");
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const errorMsg = searchParams.get('error');
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
-    setL(true);
-    const res = await signIn("credentials", {
-      username,
-      password,
+    const fd = new FormData(e.currentTarget);
+    setLoading(true);
+    const res = await signIn('credentials', {
       redirect: false,
+      username: fd.get('username'),
+      password: fd.get('password'),
     });
-    setL(false);
-    if (res?.ok) router.push("/admin/agenda");
+    setLoading(false);
+    if (!res || res.error) {
+      router.push('/login?error=Credenciales%20inv%C3%A1lidas');
+      return;
+    }
+    router.push('/admin/agenda');
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-600 p-4">
-      <div className="w-full max-w-md bg-white/95 rounded-2xl shadow-xl p-6">
-        <div className="text-center mb-4">
-          <h1 className="text-2xl font-extrabold">SEMAD</h1>
-          <p className="text-sm text-gray-500 -mt-1">Consultorio Odontológico</p>
-        </div>
-
-        {err && (
-          <div className="mb-3 rounded-lg bg-red-50 text-red-700 px-3 py-2 text-sm">
-            Usuario o contraseña incorrectos
-          </div>
-        )}
-
-        <form onSubmit={onSubmit} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Usuario</label>
-            <input
-              className="w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              value={username}
-              onChange={(e) => setU(e.target.value)}
-              placeholder="admin"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Contraseña</label>
-            <input
-              type="password"
-              className="w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              value={password}
-              onChange={(e) => setP(e.target.value)}
-              placeholder="admin123"
-            />
-          </div>
-          <button
-            disabled={loading}
-            className="w-full rounded-xl bg-purple-600 text-white py-2 font-semibold hover:bg-purple-700 disabled:opacity-60"
-          >
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
-          <p className="text-xs text-center text-gray-500">
-            Ya ejecutaste <span className="font-mono">/api/seed</span> ✔
-          </p>
-        </form>
+    <div className="w-full max-w-sm rounded-2xl border bg-white p-6 shadow">
+      <div className="mb-4 flex items-center justify-center gap-2">
+        <Image src="/logo_semad.png" alt="SEMAD" width={48} height={48} />
+        <div className="text-xl font-bold">SEMAD</div>
       </div>
+
+      {errorMsg && (
+        <div className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">
+          {decodeURIComponent(errorMsg)}
+        </div>
+      )}
+
+      <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium">Usuario</label>
+          <input
+            name="username"
+            defaultValue="admin"
+            className="mt-1 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-fuchsia-500"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Contraseña</label>
+          <input
+            name="password"
+            type="password"
+            defaultValue="admin123"
+            className="mt-1 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-fuchsia-500"
+            required
+          />
+        </div>
+        <button
+          disabled={loading}
+          className="mt-2 w-full rounded-md bg-gradient-to-r from-fuchsia-600 to-indigo-600 px-4 py-2 font-semibold text-white disabled:opacity-60"
+        >
+          {loading ? 'Entrando…' : 'Entrar'}
+        </button>
+      </form>
+
+      <p className="mt-4 text-center text-xs text-gray-500">
+        Después del despliegue, visita <code>/api/seed</code> para crear los usuarios demo.
+      </p>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-fuchsia-100 via-purple-100 to-indigo-100 p-4">
+      <Suspense fallback={<div>Cargando…</div>}>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }
