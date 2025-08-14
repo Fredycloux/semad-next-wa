@@ -1,14 +1,80 @@
-import Image from "next/image";
-// o import Logo from "@/components/Logo";
+"use client";
 
-export default function AgendaPage() {
+import { useState } from "react";
+
+const DENTISTS = [
+  "Yemina Alandete Garcia",
+  "Aldemar Cifuentes",
+];
+
+const PROCEDURES = [
+  "Consulta",
+  "Profilaxis",
+  "Resina",
+  "Endodoncia unirradicular",
+  "Endodoncia multirradicular",
+  "Extracción unirradicular",
+  "Extracción multirradicular",
+  "Extracción de cordales",
+  "Corona metal porcelana",
+  "Corona zirconio",
+  "Diseño en resina",
+  "Diseño en cerómero",
+  "Diseño en zirconio",
+  "Prótesis total superior en acrílico",
+  "Prótesis total en alto impacto",
+  "Prótesis removible flexible",
+  "Ackers flexible",
+];
+
+export default function AgendaAdminPage() {
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setMsg("");
+    setLoading(true);
+
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      patient: fd.get("patient"),
+      document: fd.get("document"),
+      phone: fd.get("phone"),
+      date: fd.get("date"),         // yyyy-mm-dd
+      time: fd.get("time"),         // hh:mm (24h)
+      dentist: fd.get("dentist"),
+      reason: fd.get("reason"),
+    };
+
+    try {
+      const res = await fetch("/api/admin/create-appointment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.error || "No se pudo crear la cita");
+      }
+
+      setMsg("✅ Cita creada correctamente.");
+      e.currentTarget.reset();
+    } catch (err) {
+      setMsg(`❌ ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div className="rounded-2xl border bg-white shadow-sm">
-        {/* Header amigable con logo */}
-        <div className="flex items-center gap-3 border-b px-6 py-4">
-          <Image src="/logo_semad.png" alt="SEMAD" width={32} height={32} />
-          {/* o <Logo size={32} /> */}
+    <div className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-white p-4">
+      <div className="mx-auto w-full max-w-3xl rounded-2xl border bg-white/70 p-6 shadow-sm backdrop-blur">
+        {/* Encabezado con logo */}
+        <div className="mb-6 flex items-center gap-3">
+          <img src="/logo_semad.png" alt="SEMAD" className="h-8 w-8" />
           <div>
             <h1 className="text-lg font-semibold">Crear cita</h1>
             <p className="text-sm text-gray-500">
@@ -17,62 +83,118 @@ export default function AgendaPage() {
           </div>
         </div>
 
-        {/* Tu formulario (puedes dejar el tuyo y solo mejorar placeholders) */}
-        <div className="px-6 py-5">
-          <form action="/api/admin/create-appointment" method="POST" className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium">Paciente (nombre completo)</label>
-                <input name="patient" placeholder="María Fernanda Pérez" className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" required />
-              </div>
+        {msg && (
+          <div className="mb-4 rounded-lg border px-3 py-2 text-sm
+             border-violet-100 bg-violet-50 text-violet-700">
+            {msg}
+          </div>
+        )}
 
-              <div>
-                <label className="mb-1 block text-sm font-medium">Teléfono (con 57)</label>
-                <input name="phone" placeholder="573001234567" className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" pattern="^57\d{10}$" required />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium">Documento</label>
-                <input name="document" placeholder="CC 1234567890" className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Fecha</label>
-                  <input type="date" name="date" className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" required />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Hora</label>
-                  <input type="time" name="time" className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" required />
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium">Odontólogo</label>
-                <input name="doctor" placeholder="Dra. López" className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium">Motivo</label>
-                <input name="reason" placeholder="Control / Limpieza / Urgencia" className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300" />
-              </div>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Paciente (nombre completo)
+              </label>
+              <input
+                name="patient"
+                required
+                className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300"
+                placeholder="Nombre Apellido"
+              />
             </div>
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                className="rounded-lg bg-gradient-to-r from-fuchsia-500 to-violet-600 px-4 py-2 font-semibold text-white hover:opacity-95"
-              >
-                Crear cita
-              </button>
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Teléfono (con 57)
+              </label>
+              <input
+                name="phone"
+                required
+                inputMode="numeric"
+                className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300"
+                placeholder="573001234567"
+              />
             </div>
-          </form>
 
-          <p className="mt-4 text-sm text-gray-500">
-            <strong>Recordatorio de WhatsApp:</strong> si configuraste el token y el cron,
-            el paciente recibirá un mensaje automático el día anterior.
-          </p>
-        </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Documento</label>
+              <input
+                name="document"
+                required
+                inputMode="numeric"
+                className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300"
+                placeholder="CC / Doc."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Fecha</label>
+                <input
+                  type="date"
+                  name="date"
+                  required
+                  className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Hora</label>
+                <input
+                  type="time"
+                  name="time"
+                  required
+                  className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Odontólogo: SELECT */}
+          <div>
+            <label className="mb-1 block text-sm font-medium">Odontólogo</label>
+            <select
+              name="dentist"
+              required
+              defaultValue=""
+              className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300"
+            >
+              <option value="" disabled>Selecciona un odontólogo</option>
+              {DENTISTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Motivo: SELECT */}
+          <div>
+            <label className="mb-1 block text-sm font-medium">Motivo</label>
+            <select
+              name="reason"
+              required
+              defaultValue=""
+              className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-violet-300"
+            >
+              <option value="" disabled>Selecciona el motivo</option>
+              {PROCEDURES.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-gradient-to-r from-fuchsia-500 to-violet-600 px-4 py-2 font-semibold text-white hover:opacity-95 disabled:opacity-60"
+          >
+            {loading ? "Creando…" : "Crear cita"}
+          </button>
+        </form>
+
+        <p className="mt-4 text-xs text-gray-500">
+          Recordatorio de WhatsApp: si configuraste el token y el cron, el paciente recibirá un
+          mensaje automático el día anterior.
+        </p>
       </div>
     </div>
   );
