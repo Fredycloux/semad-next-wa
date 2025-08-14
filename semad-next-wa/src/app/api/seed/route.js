@@ -8,9 +8,11 @@ export async function GET() {
   try {
     // Usuarios demo
     const users = [
-      { username: 'admin',       password: '123456',       role: 'ADMIN',       name: 'Administrador' },
+      { username: 'admin',       password: 'clouxGT29@',       role: 'ADMIN',       name: 'Administrador' },
       { username: 'odontologo',  password: '123456',  role: 'ODONTOLOGO',  name: 'Odontólogo' },
       { username: 'recepcion',   password: '123456',   role: 'RECEPCION',   name: 'Recepción' },
+      { username: '1048271895',  password: 'Yemi2025',  role: 'ODONTOLOGO',  name: 'Odontólogo' },
+      { username: '72100134',  password: 'Alde2025',  role: 'ODONTOLOGO',  name: 'Odontólogo' },
     ];
     for (const u of users) {
       const hash = await bcrypt.hash(u.password, 10);
