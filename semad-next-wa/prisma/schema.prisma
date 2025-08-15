@@ -19,20 +19,23 @@ model User {
 }
 
 model Patient {
-  id          String   @id @default(cuid())
-  fullName    String
-  document    String?
-  phone       String?
-  email       String?
-  insurer     String?
-  allergies   String?
-  history     String?
-  dentition   Dentition @default(ADULT) // <--- NUEVO
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  appointments   Appointment[]
-  invoices       Invoice[]
-  odontogram     OdontogramEntry[]
+  id         String   @id @default(cuid())
+  fullName   String
+  document   String?
+  phone      String?
+  email      String?
+  insurer    String?
+  allergies  String?
+  history    String?
+  // nuevo (opcional, con default)
+  dentition  Dentition @default(ADULT)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  appointments  Appointment[]
+  invoices      Invoice[]
+  odontogram    OdontogramEntry[]
 }
 
 model Appointment {
@@ -86,12 +89,14 @@ model InvoiceItem {
 }
 
 model OdontogramEntry {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   tooth     String
-  label     String
-  color     String
-  patient   Patient @relation(fields: [patientId], references: [id])
+  surface   Surface?     // <— NUEVO (opcional)
+  label     String?
+  color     String?
+  patient   Patient  @relation(fields: [patientId], references: [id])
   patientId String
+  createdAt DateTime @default(now())
 }
 
 model Dentist {
@@ -111,4 +116,12 @@ enum Role {
 enum Dentition {
   ADULT
   CHILD
+}
+
+enum Surface {
+  O   // oclusal/incisal
+  M   // mesial
+  D   // distal
+  B   // vestibular/bucal
+  L   // lingual/palatina
 }
