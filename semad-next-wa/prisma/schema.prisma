@@ -19,19 +19,20 @@ model User {
 }
 
 model Patient {
-  id         String   @id @default(cuid())
-  fullName   String
-  document   String?
-  phone      String?
-  email      String?
-  insurer    String?
-  allergies  String?
-  history    String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  appointments Appointment[]
-  invoices     Invoice[]
-  odontogram   OdontogramEntry[]
+  id          String   @id @default(cuid())
+  fullName    String
+  document    String?
+  phone       String?
+  email       String?
+  insurer     String?
+  allergies   String?
+  history     String?
+  dentition   Dentition @default(ADULT) // <--- NUEVO
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  appointments   Appointment[]
+  invoices       Invoice[]
+  odontogram     OdontogramEntry[]
 }
 
 model Appointment {
@@ -105,4 +106,9 @@ enum Role {
   ADMIN
   ODONTOLOGO
   RECEPCION
+}
+
+enum Dentition {
+  ADULT
+  CHILD
 }
