@@ -106,10 +106,10 @@ export default function Odontogram({ patientId }) {
         <div className="text-sm text-gray-500">Cargando odontograma…</div>
       ) : (
         <>
-          <div className="grid grid-cols-16 gap-2">
+          <div className="grid [grid-template-columns:repeat(16,minmax(0,1fr))] gap-2">
             {TEETH_TOP.map(t => <ToothBox key={t} tooth={t} />)}
           </div>
-          <div className="grid grid-cols-16 gap-2">
+          <div className="grid [grid-template-columns:repeat(16,minmax(0,1fr))] gap-2">
             {TEETH_BOTTOM.map(t => <ToothBox key={t} tooth={t} />)}
           </div>
         </>
