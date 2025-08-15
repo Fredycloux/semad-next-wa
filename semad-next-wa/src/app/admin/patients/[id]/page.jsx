@@ -27,7 +27,7 @@ export default async function PatientPage({ params: { id } }) {
       <section className="rounded-xl border p-4">
         <div className="font-medium mb-2">Odontograma</div>
         <div className="text-sm text-gray-500">
-          Próximamente: aquí irá el odontograma interactivo (SVG clickeable).
+          <Odontogram patientId={patient.id} />
         </div>
       </section>
 
