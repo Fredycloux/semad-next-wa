@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import EditPatientForm from "@/components/EditPatientForm";
+import Odontogram from "@/components/Odontogram";
 import Link from "next/link";
 
 export const metadata = { title: "Paciente | SEMAD" };
@@ -17,18 +18,24 @@ async function getData(id) {
 }
 
 export default async function PatientPage({ params }) {
-  const patient = await getData(params.id);
-  if (!patient) return <p>Paciente no encontrado</p>;
+  const patient = await prisma.patient.findUnique({
+    where: { id: params.id },
+    include: { odontogram: true }, // <- importante
+  });
+  
+  if (!patient) return <div className="max-w-6xl mx-auto px-4 py-6">Paciente no encontrado.</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">{patient.fullName}</h1>
+        <h1 className="text-xl font-semibold">Historia de {patient.fullName}</h1>
         <p className="text-sm text-gray-500">
           Documento: {patient.document || "—"} · Tel: {patient.phone || "—"}
         </p>
       </div>
 
+      
+      {/* Datos básicos */}
       <section className="rounded-xl border bg-white/70 backdrop-blur p-4">
         <h2 className="font-medium mb-3">Datos del paciente</h2>
         <EditPatientForm patient={patient} />
@@ -53,10 +60,11 @@ export default async function PatientPage({ params }) {
         </div>
       </section>
 
+      {/* Odontograma */}
       <section className="rounded-xl border bg-white/70 backdrop-blur p-4">
         <h2 className="font-medium mb-2">Odontograma</h2>
         <p className="text-sm text-gray-500">
-          Aquí añadiremos el odontograma interactivo (siguiente paso).
+          <Odontogram patientId={patient.id} initial={patient.odontogram} />
         </p>
       </section>
 
