@@ -1,25 +1,37 @@
 "use client";
 
-export default function CancelAppointmentButton({ id, onDone }) {
-  async function cancel() {
-    if (!confirm("¿Cancelar esta cita?")) return;
-    const res = await fetch(`/api/admin/appointments/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "Cancelada" }),
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+
+export default function CancelAppointmentButton({ id }) {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  function handleClick() {
+    startTransition(async () => {
+      if (!confirm("¿Cancelar esta cita?")) return;
+
+      const res = await fetch(`/api/admin/appointments/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        // vuelve a pedir los datos del Server Component
+        router.refresh();
+      } else {
+        const { error } = await res.json().catch(() => ({}));
+        alert(`No se pudo cancelar: ${error ?? "error desconocido"}`);
+      }
     });
-    const json = await res.json();
-    if (json.ok) onDone?.();
-    else alert("No se pudo cancelar");
   }
 
   return (
     <button
-      onClick={cancel}
-      className="text-red-600 hover:text-red-700 text-sm"
-      type="button"
+      onClick={handleClick}
+      disabled={isPending}
+      className="rounded-lg border px-3 py-1 text-sm hover:bg-gray-50 disabled:opacity-60"
     >
-      Cancelar
+      {isPending ? "Cancelando…" : "Cancelar"}
     </button>
   );
 }
