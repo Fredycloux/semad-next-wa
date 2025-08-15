@@ -1,22 +1,19 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import EditPatientForm from "@/components/EditPatientForm";
 import Odontogram from "@/components/Odontogram";
 
 export const dynamic = "force-dynamic";
-const prisma = new PrismaClient();
 
 export default async function PatientPage({ params: { id } }) {
   const patient = await prisma.patient.findUnique({
     where: { id },
     include: {
       appointments: { orderBy: { date: "desc" } },
-      odontogram: true,              // <- trae las marcas para pasarlas al componente
+      odontogram: true, // OdontogramEntry[]
     },
   });
 
-  if (!patient) {
-    return <div className="p-4">Paciente no encontrado.</div>;
-  }
+  if (!patient) return <div className="p-4">Paciente no encontrado.</div>;
 
   return (
     <div className="space-y-6 p-4">
@@ -32,16 +29,12 @@ export default async function PatientPage({ params: { id } }) {
 
         <Odontogram
           patientId={patient.id}
-          initialDentition={patient.dentition === "CHILD" ? "CHILD" : "ADULT"}
-          // IMPORTANTE: pasa también el id de cada marca para poder borrarla
-          entries={
-            patient.odontogram?.map(o => ({
-              id: o.id,
-              tooth: o.tooth,
-              label: o.label,
-              color: o.color,
-            })) ?? []
-          }
+          initialDentition={patient.dentition || "ADULT"}
+          entries={patient.odontogram?.map(o => ({
+            tooth: o.tooth,
+            label: o.label,
+            color: o.color
+          })) ?? []}
         />
       </section>
 
