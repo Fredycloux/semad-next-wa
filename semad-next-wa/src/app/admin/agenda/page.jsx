@@ -1,23 +1,18 @@
-import { PrismaClient } from "@prisma/client";
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import CancelAppointmentButton from "@/components/CancelAppointmentButton";
 
-export const metadata = { title: "Agenda | SEMAD" };
-const prisma = new PrismaClient();
+export const dynamic = "force-dynamic";
 
-async function getAppointments() {
+export default async function AgendaPage() {
   const from = new Date();
   from.setDate(from.getDate() - 1);
 
-  return prisma.appointment.findMany({
+  const appts = await prisma.appointment.findMany({
     where: { date: { gte: from }, status: { not: "Cancelada" } },
     include: { patient: true },
     orderBy: { date: "asc" },
   });
-}
-
-export default async function AgendaPage() {
-  const appts = await getAppointments();
 
   return (
     <div className="space-y-4">
@@ -63,7 +58,6 @@ export default async function AgendaPage() {
                   Historia
                 </Link>
 
-                {/* ya no pasamos funciones */}
                 <CancelAppointmentButton id={a.id} />
               </div>
             </div>
