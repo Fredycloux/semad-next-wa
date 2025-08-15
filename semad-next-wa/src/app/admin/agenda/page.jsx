@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 async function getAppointments() {
   const from = new Date();
   from.setDate(from.getDate() - 1);
+
   return prisma.appointment.findMany({
     where: { date: { gte: from }, status: { not: "Cancelada" } },
     include: { patient: true },
@@ -31,12 +32,18 @@ export default async function AgendaPage() {
         {appts.length === 0 ? (
           <p className="text-sm text-gray-500">No hay citas próximas.</p>
         ) : (
-          appts.map(a => (
-            <div key={a.id} className="rounded-xl border bg-white/70 backdrop-blur p-4 flex items-center gap-3">
+          appts.map((a) => (
+            <div
+              key={a.id}
+              className="rounded-xl border bg-white/70 backdrop-blur p-4 flex items-center gap-3"
+            >
               <div className="min-w-[12rem]">
                 <div className="font-medium">
                   {new Date(a.date).toLocaleDateString()}{" "}
-                  {new Date(a.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(a.date).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </div>
                 <div className="text-xs text-gray-600">{a.dentist || "—"}</div>
               </div>
@@ -49,10 +56,15 @@ export default async function AgendaPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Link className="text-sm text-violet-700 hover:underline" href={`/admin/patients/${a.patientId}`}>
+                <Link
+                  className="text-sm text-violet-700 hover:underline"
+                  href={`/admin/patients/${a.patientId}`}
+                >
                   Historia
                 </Link>
-                <CancelAppointmentButton id={a.id} onDone={() => location.reload()} />
+
+                {/* ya no pasamos funciones */}
+                <CancelAppointmentButton id={a.id} />
               </div>
             </div>
           ))
