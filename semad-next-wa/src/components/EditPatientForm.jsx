@@ -1,58 +1,55 @@
 "use client";
-
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function EditPatientForm({ patient }) {
-  const [form, setForm] = useState({
-    fullName: patient.fullName || "",
-    document: patient.document || "",
-    phone: patient.phone || "",
-    email: patient.email || "",
-    insurer: patient.insurer || "",
-    allergies: patient.allergies || "",
-    history: patient.history || "",
-  });
-
-  function change(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
+  const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   async function onSubmit(e) {
     e.preventDefault();
+    setSaving(true);
+
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      fullName:  fd.get("fullName"),
+      document:  fd.get("document") || null,
+      phone:     fd.get("phone") || null,
+      email:     fd.get("email") || null,
+      insurer:   fd.get("insurer") || null,
+      allergies: fd.get("allergies") || null,
+      history:   fd.get("history") || null,
+    };
+
     const res = await fetch(`/api/admin/patients/${patient.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     });
-    const json = await res.json();
-    if (json.ok) alert("Datos del paciente guardados");
-    else alert("No se pudo guardar");
+
+    setSaving(false);
+    if (res.ok) {
+      alert("Paciente actualizado");
+      router.refresh();
+    } else {
+      const j = await res.json().catch(() => ({}));
+      alert("Error: " + (j.error || res.statusText));
+    }
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-3">
-      <div className="grid md:grid-cols-2 gap-3">
-        <input name="fullName" value={form.fullName} onChange={change}
-          placeholder="Nombre completo" className="border rounded-lg px-3 py-2" />
-        <input name="document" value={form.document} onChange={change}
-          placeholder="Documento" className="border rounded-lg px-3 py-2" />
-        <input name="phone" value={form.phone} onChange={change}
-          placeholder="Teléfono" className="border rounded-lg px-3 py-2" />
-        <input name="email" value={form.email} onChange={change}
-          placeholder="Email" className="border rounded-lg px-3 py-2" />
-        <input name="insurer" value={form.insurer} onChange={change}
-          placeholder="Aseguradora" className="border rounded-lg px-3 py-2" />
+    <form onSubmit={onSubmit} className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input name="fullName" defaultValue={patient.fullName || ""} className="border rounded-lg px-3 py-2" placeholder="Nombre completo" required />
+        <input name="document" defaultValue={patient.document || ""} className="border rounded-lg px-3 py-2" placeholder="Documento" />
+        <input name="phone"    defaultValue={patient.phone || ""}    className="border rounded-lg px-3 py-2" placeholder="Teléfono" />
+        <input name="email"    defaultValue={patient.email || ""}    className="border rounded-lg px-3 py-2" placeholder="Email" />
+        <input name="insurer"  defaultValue={patient.insurer || ""}  className="border rounded-lg px-3 py-2" placeholder="Aseguradora" />
       </div>
-
-      <textarea name="allergies" value={form.allergies} onChange={change}
-        placeholder="Alergias" className="border rounded-lg px-3 py-2 min-h-[72px]" />
-
-      <textarea name="history" value={form.history} onChange={change}
-        placeholder="Antecedentes / historia general"
-        className="border rounded-lg px-3 py-2 min-h-[120px]" />
-
-      <button className="self-start rounded-lg bg-violet-600 text-white px-4 py-2">
-        Guardar
+      <textarea name="allergies" defaultValue={patient.allergies || ""} className="w-full border rounded-lg px-3 py-2" placeholder="Alergias" rows={2} />
+      <textarea name="history"   defaultValue={patient.history || ""}   className="w-full border rounded-lg px-3 py-2" placeholder="Antecedentes / Notas" rows={4} />
+      <button disabled={saving} className="rounded-lg bg-violet-600 text-white px-4 py-2">
+        {saving ? "Guardando..." : "Guardar"}
       </button>
     </form>
   );
