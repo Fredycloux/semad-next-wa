@@ -1,47 +1,51 @@
 "use client";
-
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
-const links = [
-  { href: "/admin/agenda", label: "Agenda" },
-  { href: "/admin/dentists", label: "Odontólogos", disabled: true },
-  { href: "/admin/procedures", label: "Procedimientos", disabled: true },
-  { href: "/admin/inventory", label: "Inventario", disabled: true },
-  { href: "/admin/billing", label: "Facturación", disabled: true },
-  { href: "/admin/reports", label: "Reportes", disabled: true },
+const items = [
+  { href: "/admin/agenda",      label: "Agenda" },
+  { href: "/admin/dentists",    label: "Odontólogos" },
+  { href: "/admin/procedures",  label: "Procedimientos" },
+  { href: "/admin/inventory",   label: "Inventario" },
+  { href: "/admin/invoices",    label: "Facturación" },
+  { href: "/admin/reports",     label: "Reportes" },
 ];
 
 export default function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b">
-      <div className="mx-auto max-w-6xl px-3 h-14 flex items-center gap-4">
-        <Link href="/admin/agenda" className="flex items-center gap-2">
+    <header className="sticky top-0 z-10 bg-white/70 backdrop-blur border-b">
+      <div className="max-w-5xl mx-auto flex items-center gap-4 p-3">
+        <Link href="/admin/agenda" className="flex items-center gap-2 shrink-0">
           <Image src="/logo_semad.png" alt="SEMAD" width={28} height={28} />
           <span className="font-semibold">SEMAD</span>
         </Link>
 
         <nav className="flex items-center gap-2 text-sm">
-          {links.map(l => (
-            <Link
-              key={l.href}
-              href={l.disabled ? "#" : l.href}
-              className={`px-3 py-1.5 rounded-lg hover:bg-gray-100 ${
-                pathname.startsWith(l.href) ? "bg-gray-100 font-medium" : ""
-              } ${l.disabled ? "opacity-50 pointer-events-none" : ""}`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {items.map(it => {
+            const active = pathname?.startsWith(it.href);
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                className={`px-2 py-1 rounded-md ${
+                  active
+                    ? "bg-violet-100 text-violet-800"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {it.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="ml-auto">
           <Link
             href="/admin/create-appointment"
-            className="rounded-lg bg-violet-600 text-white px-3 py-1.5 text-sm hover:opacity-95"
+            className="rounded-lg bg-violet-600 text-white text-sm px-3 py-1.5"
           >
             Nueva cita
           </Link>
