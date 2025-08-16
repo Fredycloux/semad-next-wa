@@ -1,39 +1,41 @@
 // src/app/api/odontogram/route.js
 import { prisma } from "@/lib/prisma";
 import { ToothSurface } from "@prisma/client";
-import { colorForLabel } from "@/lib/odontogram-config";
 
-// Mapa para normalizar superficies (admite corto/largo y sinónimos)
+// Sinónimos -> enum de Prisma
 const SURF_MAP = {
   O: "OCCLUSAL",
   I: "INCISAL",
   M: "MESIAL",
   D: "DISTAL",
+  V: "BUCCAL",   // <-- FALTABA: V (vestibular) => BUCCAL
   B: "BUCCAL",
-  V: "BUCCAL",   // vestibular
   L: "LINGUAL",
-  P: "LINGUAL",  // palatino/lingual
-  OCCLUSAL: "OCCLUSAL",
-  INCISAL: "INCISAL",
-  MESIAL: "MESIAL",
-  DISTAL: "DISTAL",
-  BUCCAL: "BUCCAL",
-  VESTIBULAR: "BUCCAL",
-  LINGUAL: "LINGUAL",
-  PALATAL: "LINGUAL",
+  P: "LINGUAL",  // algunos usan P (palatino) para lingual
 };
 
 function normalizeSurface(s) {
   const k = String(s || "").toUpperCase();
-  const v = SURF_MAP[k] || k;
-  if (!Object.values(ToothSurface).includes(v)) {
+  const mapped = SURF_MAP[k] || k;
+  if (!Object.values(ToothSurface).includes(mapped)) {
     throw new Error(`Superficie inválida: ${s}`);
   }
-  return v;
+  return mapped;
 }
 
+// Color por defecto si no envían color (por etiqueta)
+const DEFAULT_COLORS = {
+  Caries: "#111827",
+  "Obturación": "#f59e0b",
+  Endodoncia: "#0ea5e9",
+  Corona: "#8b5cf6",
+  Fractura: "#ef4444",
+  "Pérdida": "#16a34a",   // verde visible
+  Otro: "#6b7280",
+};
+
 export async function POST(req) {
-  // Evita “Unexpected end of JSON input”
+  // Siempre intentamos leer JSON de forma segura
   let payload;
   try {
     payload = await req.json();
@@ -44,15 +46,7 @@ export async function POST(req) {
     );
   }
 
-  const {
-    patientId,
-    tooth,
-    surface = "O",
-    label,
-    color,
-    on = true,
-  } = payload || {};
-
+  const { patientId, tooth, surface = "O", label, color, on = true } = payload || {};
   if (!patientId || !tooth || !surface) {
     return Response.json(
       { ok: false, error: "patientId, tooth y surface son obligatorios" },
@@ -60,49 +54,24 @@ export async function POST(req) {
     );
   }
 
-  const s = normalizeSurface(surface);
-
-  // Color por defecto a partir del diagnóstico si no viene en el payload
-  const safeLabel = label || "Otro";
-  const resolvedColor = color || colorForLabel(safeLabel);
-
   try {
+    const s = normalizeSurface(surface);
+    const finalColor = color || DEFAULT_COLORS[label] || "#6b7280";
+
     if (on) {
-      // crea/actualiza por clave compuesta (patientId,tooth,surface)
       const entry = await prisma.odontogramEntry.upsert({
-        where: {
-          patientId_tooth_surface: {
-            patientId: String(patientId),
-            tooth: String(tooth),
-            surface: s,
-          },
-        },
-        update: { label: safeLabel, color: resolvedColor, updatedAt: new Date() },
-        create: {
-          patientId: String(patientId),
-          tooth: String(tooth),
-          surface: s,
-          label: safeLabel,
-          color: resolvedColor,
-        },
+        where: { patientId_tooth_surface: { patientId, tooth, surface: s } },
+        update: { label, color: finalColor },
+        create: { patientId, tooth, surface: s, label, color: finalColor },
       });
       return Response.json({ ok: true, entry });
     } else {
       await prisma.odontogramEntry.delete({
-        where: {
-          patientId_tooth_surface: {
-            patientId: String(patientId),
-            tooth: String(tooth),
-            surface: s,
-          },
-        },
+        where: { patientId_tooth_surface: { patientId, tooth, surface: s } },
       });
       return Response.json({ ok: true });
     }
   } catch (e) {
-    return Response.json(
-      { ok: false, error: String(e.message || e) },
-      { status: 500 }
-    );
+    return Response.json({ ok: false, error: String(e.message || e) }, { status: 500 });
   }
 }
