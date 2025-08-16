@@ -89,14 +89,15 @@ model InvoiceItem {
 model OdontogramEntry {
   id        String   @id @default(cuid())
   tooth     String
-  surface   String   // "O" | "M" | "D" | "V" | "L"
+  surface   String   @default("O") // O=Oclusal (default para filas antiguas)
   label     String
-  color     String?  // hex #RRGGBB
+  color     String?
   patient   Patient  @relation(fields: [patientId], references: [id])
   patientId String
   createdAt DateTime @default(now())
 
-  @@unique([patientId, tooth, surface], name: "patient_tooth_surface")
+  // Habilítalo más adelante, después de deduplicar:
+  // @@unique([patientId, tooth, surface], name: "patient_tooth_surface")
 }
 
 model Dentist {
