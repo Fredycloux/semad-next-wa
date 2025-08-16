@@ -1,3 +1,4 @@
+// src/app/api/odontogram/entry/[id]/route.js
 import { prisma } from "@/lib/prisma";
 
 export async function DELETE(_req, { params }) {
