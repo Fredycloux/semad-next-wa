@@ -92,23 +92,17 @@ model InvoiceItem {
 }
 
 model OdontogramEntry {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   tooth     String
-  /// Superficie: O (Oclusal), M (Mesial), D (Distal), V (Vestibular/Bucal), P (Palatino) o L (Lingual).
-  /// Le dejamos default para no romper datos existentes en el push.
-  surface   String   @default("O")
-
-  label     String?
-  color     String?
-
-  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  surface   ToothSurface  @default(WHOLE)   // default para no romper datos existentes
+  label     String
+  color     String
+  patient   Patient       @relation(fields: [patientId], references: [id])
   patientId String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([patientId])
-  @@unique([patientId, tooth, surface], name: "patient_tooth_surface")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @default(now())   // <-- DEFAULT para arreglar el error
+  // Si más adelante quieres impedir duplicados exactos en una misma cara:
+  // @@unique([patientId, tooth, surface], name: "patient_tooth_surface")
 }
 
 model Dentist {
@@ -131,4 +125,14 @@ enum Surface {
   D   // distal
   B   // vestibular/bucal
   L   // lingual/palatina
+}
+
+
+enum ToothSurface {
+  WHOLE
+  OCCLUSAL
+  MESIAL
+  DISTAL
+  LINGUAL
+  VESTIBULAR
 }
