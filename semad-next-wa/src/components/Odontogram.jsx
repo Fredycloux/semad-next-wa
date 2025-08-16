@@ -1,113 +1,74 @@
-// src/components/Odontogram.jsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type Entry = { tooth: string; surface: string; label: string; color?: string };
+// ------- catálogo ----------
+const LABELS = [
+  "Caries",
+  "Obturación",
+  "Endodoncia",
+  "Corona",
+  "Fractura",
+  "Pérdida",
+  "Otro",
+];
 
-const LABELS = ["Caries", "Obturación", "Endodoncia", "Corona", "Fractura", "Pérdida", "Otro"];
 const COLORS = ["#ef4444", "#f59e0b", "#10b981", "#0ea5e9", "#8b5cf6", "#6b7280", "#111827"];
 
-// Dientes adulto (FDI)
-const ADULT_ROWS: string[][] = [
-  ["18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28"],
-  ["48", "47", "46", "45", "44", "43", "42", "41", "31", "32", "33", "34", "35", "36", "37", "38"],
-];
+// FDI adulto (dos filas de 16)
+const ADULT_TOP    = ["18","17","16","15","14","13","12","11","21","22","23","24","25","26","27","28"];
+const ADULT_BOTTOM = ["48","47","46","45","44","43","42","41","31","32","33","34","35","36","37","38"];
 
-// Dientes infantil (FDI 51–85)
-const CHILD_ROWS: string[][] = [
-  ["55", "54", "53", "52", "51", "61", "62", "63", "64", "65"],
-  ["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"],
-];
+// FDI infantil (dos filas centradas de 10: 55→51 y 61→65; 85→81 y 71→75)
+const CHILD_TOP    = ["55","54","53","52","51","61","62","63","64","65"];
+const CHILD_BOTTOM = ["85","84","83","82","81","71","72","73","74","75"];
 
-// superficies por diente (superior 3, medio 1, inferior 3)
-//   M  O  D
-//   B/V   L/P
-const SURFACES = ["M", "O", "D", "B", "L"] as const;
-type Surface = (typeof SURFACES)[number];
+// superficies del diente (nomenclatura simple)
+const SURFACES = ["O", "M", "D", "V", "L"]; // Oclusal, Mesial, Distal, Vestibular, Lingual
 
-export default function Odontogram({
-  patientId,
-  initialDentition = "ADULT",
-  entries = [],
-}: {
-  patientId: string;
-  initialDentition?: "ADULT" | "CHILD";
-  entries?: Entry[];
-}) {
-  const [dentition, setDentition] = useState<"ADULT" | "CHILD">(initialDentition);
-  const [selectedTooth, setSelectedTooth] = useState<string | null>(null);
-  const [selectedSurface, setSelectedSurface] = useState<Surface | null>(null);
-  const [label, setLabel] = useState<string>(LABELS[0]);
-  const [color, setColor] = useState<string>(COLORS[0]);
+export default function Odontogram({ patientId, initialDentition = "ADULT", entries = [] }) {
+  // estado UI
+  const [dentition, setDentition] = useState(initialDentition === "CHILD" ? "CHILD" : "ADULT");
+  const [label, setLabel]   = useState(LABELS[0]);
+  const [color, setColor]   = useState(COLORS[0]);
+  const [loading, setLoading] = useState(true);
 
-  // Estructura de marcas: Map<tooth, Map<surface, Entry>>
-  const marks = useMemo(() => {
-    const map = new Map<string, Map<string, Entry>>();
-    for (const e of entries) {
-      const m = map.get(e.tooth) ?? new Map<string, Entry>();
-      m.set(e.surface ?? "O", e);
-      map.set(e.tooth, m);
+  // mapa de marcas existentes: key = `${tooth}|${surface}` -> { id?, tooth, surface, label, color }
+  const [marks, setMarks] = useState(() => {
+    const m = new Map();
+    (entries || []).forEach(e => {
+      const key = `${e.tooth}|${e.surface || "O"}`;
+      m.set(key, { ...e, surface: e.surface || "O" });
+    });
+    return m;
+  });
+
+  // cargar del servidor (siempre)
+  useEffect(() => {
+    let alive = true;
+    async function load() {
+      try {
+        const res = await fetch(`/api/odontogram/${patientId}`, { cache: "no-store" });
+        const j = await res.json();
+        if (!alive) return;
+        const m = new Map();
+        (j.entries || []).forEach(e => {
+          const key = `${e.tooth}|${e.surface || "O"}`;
+          m.set(key, e);
+        });
+        setMarks(m);
+      } catch (_) {
+        // ignora
+      } finally {
+        if (alive) setLoading(false);
+      }
     }
-    return map;
-  }, [entries]);
+    load();
+    return () => { alive = false; };
+  }, [patientId]);
 
-  const rows = dentition === "ADULT" ? ADULT_ROWS : CHILD_ROWS;
-
-  function isMarked(tooth: string, surface: Surface) {
-    return marks.get(tooth)?.has(surface) ?? false;
-  }
-
-  function surfaceColor(tooth: string, surface: Surface) {
-    return marks.get(tooth)?.get(surface)?.color ?? undefined;
-  }
-
-  function openPanel(tooth: string, surface: Surface) {
-    setSelectedTooth(tooth);
-    setSelectedSurface(surface);
-    // precarga color/label si ya existe
-    const e = marks.get(tooth)?.get(surface);
-    if (e?.label) setLabel(e.label);
-    if (e?.color) setColor(e.color);
-  }
-
-  async function save() {
-    if (!selectedTooth || !selectedSurface) return;
-    const res = await fetch("/api/odontogram", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        patientId,
-        tooth: selectedTooth,
-        surface: selectedSurface,
-        label,
-        color,
-        on: true,
-      }),
-    });
-    const j = await res.json();
-    if (!j.ok) return alert(j.error || "Error al guardar");
-    location.reload(); // simple revalidación
-  }
-
-  async function clear() {
-    if (!selectedTooth || !selectedSurface) return;
-    const res = await fetch("/api/odontogram", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        patientId,
-        tooth: selectedTooth,
-        surface: selectedSurface,
-        on: false,
-      }),
-    });
-    const j = await res.json();
-    if (!j.ok) return alert(j.error || "Error al eliminar");
-    location.reload();
-  }
-
-  async function switchDentition(next: "ADULT" | "CHILD") {
+  // persistir dentición (si existe la ruta; si no, ignora error)
+  async function switchDentition(next) {
     setDentition(next);
     try {
       await fetch(`/api/admin/patients/${patientId}/dentition`, {
@@ -118,198 +79,211 @@ export default function Odontogram({
     } catch {}
   }
 
+  // alternar una marca en diente/superficie
+  async function toggleSurface(tooth, surface) {
+    const key = `${tooth}|${surface}`;
+    const exists = marks.get(key);
+
+    // Optimista
+    setMarks(prev => {
+      const m = new Map(prev);
+      if (exists) m.delete(key);
+      else m.set(key, { tooth, surface, label, color });
+      return m;
+    });
+
+    try {
+      const res = await fetch("/api/odontogram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientId,
+          tooth,
+          surface,
+          label,
+          color,
+          on: !exists, // crear o borrar
+        }),
+      });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || "error");
+      // si creó, asegúrate de guardar el id retornado
+      if (!exists && j.entry) {
+        setMarks(prev => {
+          const m = new Map(prev);
+          m.set(key, j.entry);
+          return m;
+        });
+      }
+    } catch (e) {
+      // revertir si falló
+      setMarks(prev => {
+        const m = new Map(prev);
+        if (exists) m.set(key, exists);
+        else m.delete(key);
+        return m;
+      });
+      alert("No se pudo guardar: " + e.message);
+    }
+  }
+
+  // helper UI: devuelve true si la superficie está marcada
+  function isOn(tooth, surface) {
+    return marks.has(`${tooth}|${surface}`);
+  }
+
+  // ---------- Diente SVG con 5 zonas ----------
+  function ToothSVG({ tooth, size = 52 }) {
+    const pad = 2;
+    const w = size, h = size;
+
+    // zonas como rectángulos
+    const centerSize = w * 0.36;
+    const side = (w - centerSize - pad * 2) / 2;
+
+    const cx = (w - centerSize) / 2;
+    const cy = (h - centerSize) / 2;
+
+    const fill = (surf) => (isOn(tooth, surf) ? (color || "#7c3aed") : "white");
+    const stroke = (surf) => (isOn(tooth, surf) ? (color || "#7c3aed") : "#CBD5E1");
+
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        {/* borde del diente */}
+        <rect x="0.5" y="0.5" width={w-1} height={h-1} rx="8" ry="8" fill="#fff" stroke="#E5E7EB" />
+
+        {/* V = arriba */}
+        <rect
+          x={pad} y={pad} width={w - pad * 2} height={side}
+          fill={fill("V")} stroke={stroke("V")}
+          onClick={() => toggleSurface(tooth, "V")}
+          style={{ cursor: "pointer" }}
+        />
+        {/* L = abajo */}
+        <rect
+          x={pad} y={h - pad - side} width={w - pad * 2} height={side}
+          fill={fill("L")} stroke={stroke("L")}
+          onClick={() => toggleSurface(tooth, "L")}
+          style={{ cursor: "pointer" }}
+        />
+        {/* M = izquierda */}
+        <rect
+          x={pad} y={cy} width={side} height={centerSize}
+          fill={fill("M")} stroke={stroke("M")}
+          onClick={() => toggleSurface(tooth, "M")}
+          style={{ cursor: "pointer" }}
+        />
+        {/* D = derecha */}
+        <rect
+          x={w - pad - side} y={cy} width={side} height={centerSize}
+          fill={fill("D")} stroke={stroke("D")}
+          onClick={() => toggleSurface(tooth, "D")}
+          style={{ cursor: "pointer" }}
+        />
+        {/* O = centro */}
+        <rect
+          x={cx} y={cy} width={centerSize} height={centerSize} rx="6"
+          fill={fill("O")} stroke={stroke("O")}
+          onClick={() => toggleSurface(tooth, "O")}
+          style={{ cursor: "pointer" }}
+        />
+
+        {/* número del diente */}
+        <text x={w - 6} y={h - 6} textAnchor="end" fontSize="9" fill="#9CA3AF">
+          {tooth}
+        </text>
+      </svg>
+    );
+  }
+
+  // Layout de dientes por dentición
+  const rows = useMemo(() => {
+    if (dentition === "ADULT") return [ADULT_TOP, ADULT_BOTTOM];
+    // centrado infantil: 10 dientes por fila -> paddings a 16 columnas
+    const pad = (arr) => {
+      const total = 16, n = arr.length;
+      const left = Math.floor((total - n) / 2);
+      return Array.from({ length: left }, () => null).concat(arr).concat(
+        Array.from({ length: total - left - n }, () => null)
+      );
+    };
+    return [pad(CHILD_TOP), pad(CHILD_BOTTOM)];
+  }, [dentition]);
+
   return (
     <div className="space-y-4">
-      {/* switch Niño/Adulto */}
-      <div className="flex items-center gap-2">
+      {/* Switch Niño/Adulto */}
+      <div className="flex items-center gap-3">
         <span className="text-sm font-medium">Dentición:</span>
         <button
-          onClick={() => switchDentition("ADULT")}
-          className={`px-3 py-1 rounded-full border ${
-            dentition === "ADULT" ? "bg-violet-600 text-white" : "bg-white"
-          }`}
           type="button"
+          onClick={() => switchDentition("ADULT")}
+          className={`rounded-full px-3 py-1 text-sm border ${dentition === "ADULT" ? "bg-violet-600 text-white" : "bg-white"}`}
         >
           Adulto
         </button>
         <button
-          onClick={() => switchDentition("CHILD")}
-          className={`px-3 py-1 rounded-full border ${
-            dentition === "CHILD" ? "bg-violet-600 text-white" : "bg-white"
-          }`}
           type="button"
+          onClick={() => switchDentition("CHILD")}
+          className={`rounded-full px-3 py-1 text-sm border ${dentition === "CHILD" ? "bg-violet-600 text-white" : "bg-white"}`}
         >
           Niño
         </button>
       </div>
 
-      {/* Rejilla de dientes */}
-      <div className="space-y-2">
-        {rows.map((row, idx) => (
-          <div
-            key={idx}
-            className="grid"
-            style={{
-              gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))`,
-              gap: 8,
-            }}
+      {/* controles de etiqueta/color */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <div className="text-xs mb-1 text-gray-500">Diagnóstico</div>
+          <select
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2"
           >
-            {row.map((tooth) => (
-              <Tooth
-                key={tooth}
-                tooth={tooth}
-                onPick={openPanel}
-                isMarked={isMarked}
-                getColor={surfaceColor}
+            {LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </div>
+        <div className="sm:col-span-2">
+          <div className="text-xs mb-1 text-gray-500">Color</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {COLORS.map(c => (
+              <button
+                key={c}
+                type="button"
+                className={`h-7 w-7 rounded-full border ${c === color ? "ring-2 ring-violet-500" : ""}`}
+                style={{ backgroundColor: c }}
+                onClick={() => setColor(c)}
+                title={c}
               />
             ))}
           </div>
-        ))}
+        </div>
       </div>
 
-      {/* Panel de edición */}
-      {selectedTooth && selectedSurface && (
-        <div className="rounded-xl border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-medium">
-              Diente {selectedTooth} · superficie {selectedSurface}
+      {/* grilla de dientes */}
+      {loading ? (
+        <div className="text-sm text-gray-500">Cargando odontograma…</div>
+      ) : (
+        <>
+          {rows.map((row, idx) => (
+            <div key={idx} className="grid [grid-template-columns:repeat(16,minmax(0,1fr))] gap-2">
+              {row.map((t, i) =>
+                t ? (
+                  <div key={t} className="rounded-lg border bg-white/60 backdrop-blur flex items-center justify-center">
+                    <ToothSVG tooth={t} />
+                  </div>
+                ) : (
+                  <div key={i} />
+                )
+              )}
             </div>
-            <button onClick={() => { setSelectedTooth(null); setSelectedSurface(null); }} className="text-sm text-gray-500">
-              cerrar
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Diagnóstico</div>
-              <select
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2"
-              >
-                {LABELS.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Color</div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColor(c)}
-                    className={`h-7 w-7 rounded-full border ${
-                      c === color ? "ring-2 ring-violet-500" : ""
-                    }`}
-                    style={{ backgroundColor: c }}
-                    title={c}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-end gap-2">
-              <button
-                onClick={save}
-                className="flex-1 rounded-lg bg-violet-600 text-white px-4 py-2"
-              >
-                Guardar marca
-              </button>
-              <button onClick={clear} className="rounded-lg border px-3 py-2">
-                Eliminar
-              </button>
-            </div>
-          </div>
-
-          <p className="mt-3 text-xs text-gray-500">
-            Haz clic en una zona de la muela para marcar; vuelve a abrir y presiona “Eliminar” para quitarla.
-          </p>
-        </div>
+          ))}
+        </>
       )}
-    </div>
-  );
-}
 
-function Tooth({
-  tooth,
-  onPick,
-  isMarked,
-  getColor,
-}: {
-  tooth: string;
-  onPick: (t: string, s: Surface) => void;
-  isMarked: (t: string, s: Surface) => boolean;
-  getColor: (t: string, s: Surface) => string | undefined;
-}) {
-  // Un diente cuadrado con 5 zonas (M,O,D,B,L)
-  return (
-    <div className="relative h-16 rounded-lg border p-1 grid grid-cols-3 grid-rows-3">
-      {/* M */}
-      <SurfaceCell
-        marked={isMarked(tooth, "M")}
-        color={getColor(tooth, "M")}
-        onClick={() => onPick(tooth, "M")}
-        className="col-span-1 row-span-1"
-      />
-      {/* O */}
-      <SurfaceCell
-        marked={isMarked(tooth, "O")}
-        color={getColor(tooth, "O")}
-        onClick={() => onPick(tooth, "O")}
-        className="col-span-1 row-span-1 col-start-2 row-start-2"
-      />
-      {/* D */}
-      <SurfaceCell
-        marked={isMarked(tooth, "D")}
-        color={getColor(tooth, "D")}
-        onClick={() => onPick(tooth, "D")}
-        className="col-start-3 row-start-1"
-      />
-      {/* B/V */}
-      <SurfaceCell
-        marked={isMarked(tooth, "B")}
-        color={getColor(tooth, "B")}
-        onClick={() => onPick(tooth, "B")}
-        className="col-start-1 row-start-3"
-      />
-      {/* L/P */}
-      <SurfaceCell
-        marked={isMarked(tooth, "L")}
-        color={getColor(tooth, "L")}
-        onClick={() => onPick(tooth, "L")}
-        className="col-start-3 row-start-3"
-      />
-      <div className="absolute top-0.5 left-0.5 text-[10px] text-gray-400">{tooth}</div>
+      <p className="text-xs text-gray-500">
+        Click una zona para alternar. Se guarda automáticamente por diente/superficie.
+      </p>
     </div>
-  );
-}
-
-function SurfaceCell({
-  marked,
-  color,
-  onClick,
-  className,
-}: {
-  marked: boolean;
-  color?: string;
-  onClick: () => void;
-  className?: string;
-}) {
-  const style = marked
-    ? { backgroundColor: (color || "#111827") + "33", borderColor: color || "#111827" }
-    : {};
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`m-0.5 rounded border hover:bg-violet-50 ${className ?? ""}`}
-      style={style}
-      aria-pressed={marked}
-    />
   );
 }
