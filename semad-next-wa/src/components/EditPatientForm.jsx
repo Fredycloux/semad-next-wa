@@ -44,7 +44,7 @@ export default function EditPatientForm({ patient }) {
         <input name="document" defaultValue={patient.document || ""} className="border rounded-lg px-3 py-2" placeholder="Documento" />
         <input name="phone"    defaultValue={patient.phone || ""}    className="border rounded-lg px-3 py-2" placeholder="Teléfono" />
         <input name="email"    defaultValue={patient.email || ""}    className="border rounded-lg px-3 py-2" placeholder="Email" />
-        <input name="insurer"  defaultValue={patient.insurer || ""}  className="border rounded-lg px-3 py-2" placeholder="Aseguradora" />
+        <input name="insurer"  defaultValue={patient.insurer || ""}  className="border rounded-lg px-3 py-2" placeholder="EPS" />
       </div>
       <textarea name="allergies" defaultValue={patient.allergies || ""} className="w-full border rounded-lg px-3 py-2" placeholder="Alergias" rows={2} />
       <textarea name="history"   defaultValue={patient.history || ""}   className="w-full border rounded-lg px-3 py-2" placeholder="Antecedentes / Notas" rows={4} />
