@@ -96,7 +96,7 @@ model OdontogramEntry {
   patientId String
   patient   Patient      @relation(fields: [patientId], references: [id])
   tooth     String
-  surface   ToothSurface
+  surface   Surface
   label     String
   color     String?
   createdAt DateTime     @default(now())
