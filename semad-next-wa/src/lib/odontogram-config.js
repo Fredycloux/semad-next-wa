@@ -18,7 +18,7 @@ export const DIAG_COLORS = {
   Endodoncia:  "#8b5cf6",
   Corona:      "#f59e0b",
   Fractura:    "#ef4444",
-  Pérdida:     "#6b7280",
+  Pérdida:     "#d946ef",
   Otro:        "#10b981",
 };
 
