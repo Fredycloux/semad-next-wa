@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Dentition {
+  ADULT
+  CHILD
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -24,16 +29,13 @@ model Patient {
   document   String?
   phone      String?
   email      String?
-  insurer    String?
-  allergies  String?
-  history    String?
-  dentition  String   @default("ADULT") // "ADULT" | "CHILD"
+  dentition  Dentition @default(ADULT)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  appointments   Appointment[]
-  invoices       Invoice[]
-  odontogram     OdontogramEntry[]
+  appointments Appointment[]
+  invoices     Invoice[]
+  odontogram   OdontogramEntry[]
 }
 
 model Appointment {
@@ -89,16 +91,16 @@ model InvoiceItem {
 model OdontogramEntry {
   id        String   @id @default(cuid())
   tooth     String
-  surface   String   @default("O") // O=Oclusal (default para filas antiguas)
+  surface   String   @default("O") // O: Oclusal  (default para filas antiguas)
   label     String
   color     String?
-  patient   Patient  @relation(fields: [patientId], references: [id])
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   patientId String
   createdAt DateTime @default(now())
 
-  // Habilítalo más adelante, después de deduplicar:
+  // Cuando estés seguro de no tener duplicados:
   // @@unique([patientId, tooth, surface], name: "patient_tooth_surface")
-}
+}}
 
 model Dentist {
   id        Int      @id @default(autoincrement())
@@ -112,11 +114,6 @@ enum Role {
   ADMIN
   ODONTOLOGO
   RECEPCION
-}
-
-enum Dentition {
-  ADULT
-  CHILD
 }
 
 enum Surface {
