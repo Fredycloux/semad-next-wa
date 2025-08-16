@@ -1,39 +1,31 @@
 // src/app/api/odontogram/route.js
 import { prisma } from "@/lib/prisma";
-import { ToothSurface } from "@prisma/client";
+import { Surface } from "@prisma/client"; // <-- tu enum
 import { colorForLabel } from "@/lib/odontogram-config";
 
-// Mapa para normalizar superficies (admite corto/largo y sinónimos)
+// Normalización: acepta corto y sinónimos a tu enum {O,M,D,B,L}
 const SURF_MAP = {
-  O: "OCCLUSAL",
-  I: "INCISAL",
-  M: "MESIAL",
-  D: "DISTAL",
-  B: "BUCCAL",
-  V: "BUCCAL",   // vestibular
-  L: "LINGUAL",
-  P: "LINGUAL",  // palatino/lingual
-  OCCLUSAL: "OCCLUSAL",
-  INCISAL: "INCISAL",
-  MESIAL: "MESIAL",
-  DISTAL: "DISTAL",
-  BUCCAL: "BUCCAL",
-  VESTIBULAR: "BUCCAL",
-  LINGUAL: "LINGUAL",
-  PALATAL: "LINGUAL",
+  O: "O",
+  I: "O",          // incisales los tratamos como O
+  M: "M",
+  D: "D",
+  B: "B",
+  V: "B",          // vestibular -> B
+  L: "L",
+  P: "L",          // palatino -> L
 };
 
 function normalizeSurface(s) {
   const k = String(s || "").toUpperCase();
   const v = SURF_MAP[k] || k;
-  if (!Object.values(ToothSurface).includes(v)) {
+  if (!Object.values(Surface).includes(v)) {
     throw new Error(`Superficie inválida: ${s}`);
   }
   return v;
 }
 
 export async function POST(req) {
-  // Evita “Unexpected end of JSON input”
+  // Evitar "Unexpected end of JSON input"
   let payload;
   try {
     payload = await req.json();
@@ -44,14 +36,7 @@ export async function POST(req) {
     );
   }
 
-  const {
-    patientId,
-    tooth,
-    surface = "O",
-    label,
-    color,
-    on = true,
-  } = payload || {};
+  const { patientId, tooth, surface = "O", label, color, on = true } = payload || {};
 
   if (!patientId || !tooth || !surface) {
     return Response.json(
@@ -61,24 +46,21 @@ export async function POST(req) {
   }
 
   try {
-    // 👇 Normalizamos DENTRO del try para capturar errores y responder JSON.
     const s = normalizeSurface(surface);
 
-    // Color por defecto a partir del diagnóstico si no viene en el payload
     const safeLabel = (label || "Otro").trim();
     const resolvedColor = color || colorForLabel(safeLabel);
 
     if (on) {
-      // crea/actualiza por clave compuesta (patientId,tooth,surface)
       const entry = await prisma.odontogramEntry.upsert({
         where: {
           patientId_tooth_surface: {
             patientId: String(patientId),
             tooth: String(tooth),
-            surface: s,
+            surface: s, // <--- enum Surface (O|M|D|B|L)
           },
         },
-        update: { label: safeLabel, color: resolvedColor }, // updatedAt lo maneja @updatedAt
+        update: { label: safeLabel, color: resolvedColor },
         create: {
           patientId: String(patientId),
           tooth: String(tooth),
@@ -101,9 +83,6 @@ export async function POST(req) {
       return Response.json({ ok: true });
     }
   } catch (e) {
-    return Response.json(
-      { ok: false, error: String(e.message || e) },
-      { status: 500 }
-    );
+    return Response.json({ ok: false, error: String(e.message || e) }, { status: 500 });
   }
 }
