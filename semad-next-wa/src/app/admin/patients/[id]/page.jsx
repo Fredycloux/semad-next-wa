@@ -18,7 +18,7 @@ export default async function PatientPage({ params: { id } }) {
 
   const entries = (patient.odontogram || []).map(e => ({
     tooth: e.tooth,
-    surface: e.surface,
+    surface: e.surface ?? "O",
     label: e.label,
     color: e.color,
   }));
@@ -40,21 +40,7 @@ export default async function PatientPage({ params: { id } }) {
           entries={entries}
         />
       </section>
-
-      <section className="rounded-xl border p-4">
-        <div className="font-medium mb-2">Citas</div>
-        {patient.appointments.length === 0 ? (
-          <div className="text-sm text-gray-500">Sin citas registradas.</div>
-        ) : (
-          <ul className="text-sm space-y-1">
-            {patient.appointments.map(a => (
-              <li key={a.id}>
-                {new Date(a.date).toLocaleString()} — {a.reason || "—"} {a.status && `· ${a.status}`}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {/* ... resto */}
     </div>
   );
 }
