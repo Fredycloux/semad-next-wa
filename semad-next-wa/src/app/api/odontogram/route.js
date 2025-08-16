@@ -1,16 +1,26 @@
 // src/app/api/odontogram/route.js
 import { prisma } from "@/lib/prisma";
 import { ToothSurface } from "@prisma/client";
+import { colorForLabel } from "@/lib/odontogram-config";
 
-// Normaliza superficies (permite O/I/M/D/B/L/P)
+// Mapa para normalizar superficies (admite corto/largo y sinónimos)
 const SURF_MAP = {
   O: "OCCLUSAL",
   I: "INCISAL",
   M: "MESIAL",
   D: "DISTAL",
   B: "BUCCAL",
+  V: "BUCCAL",   // vestibular
   L: "LINGUAL",
-  P: "LINGUAL", // por si usas P en vez de L
+  P: "LINGUAL",  // palatino/lingual
+  OCCLUSAL: "OCCLUSAL",
+  INCISAL: "INCISAL",
+  MESIAL: "MESIAL",
+  DISTAL: "DISTAL",
+  BUCCAL: "BUCCAL",
+  VESTIBULAR: "BUCCAL",
+  LINGUAL: "LINGUAL",
+  PALATAL: "LINGUAL",
 };
 
 function normalizeSurface(s) {
@@ -23,7 +33,7 @@ function normalizeSurface(s) {
 }
 
 export async function POST(req) {
-  // <- evita "Unexpected end of JSON input"
+  // Evita “Unexpected end of JSON input”
   let payload;
   try {
     payload = await req.json();
@@ -52,21 +62,39 @@ export async function POST(req) {
 
   const s = normalizeSurface(surface);
 
+  // Color por defecto a partir del diagnóstico si no viene en el payload
+  const safeLabel = label || "Otro";
+  const resolvedColor = color || colorForLabel(safeLabel);
+
   try {
     if (on) {
       // crea/actualiza por clave compuesta (patientId,tooth,surface)
       const entry = await prisma.odontogramEntry.upsert({
         where: {
-          patientId_tooth_surface: { patientId, tooth, surface: s },
+          patientId_tooth_surface: {
+            patientId: String(patientId),
+            tooth: String(tooth),
+            surface: s,
+          },
         },
-        update: { label, color },
-        create: { patientId, tooth, surface: s, label, color },
+        update: { label: safeLabel, color: resolvedColor, updatedAt: new Date() },
+        create: {
+          patientId: String(patientId),
+          tooth: String(tooth),
+          surface: s,
+          label: safeLabel,
+          color: resolvedColor,
+        },
       });
       return Response.json({ ok: true, entry });
     } else {
       await prisma.odontogramEntry.delete({
         where: {
-          patientId_tooth_surface: { patientId, tooth, surface: s },
+          patientId_tooth_surface: {
+            patientId: String(patientId),
+            tooth: String(tooth),
+            surface: s,
+          },
         },
       });
       return Response.json({ ok: true });
