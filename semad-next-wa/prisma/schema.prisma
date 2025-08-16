@@ -24,18 +24,21 @@ model User {
 }
 
 model Patient {
-  id         String   @id @default(cuid())
-  fullName   String
-  document   String?
-  phone      String?
-  email      String?
-  dentition  Dentition @default(ADULT)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String             @id @default(cuid())
+  fullName    String
+  document    String?
+  phone       String?
+  email       String?
+  insurer     String?
+  allergies   String?
+  history     String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
+  dentition   Dentition          @default(ADULT)
   appointments Appointment[]
   invoices     Invoice[]
-  odontogram   OdontogramEntry[]
+  odontogram   OdontogramEntry[]  // <- relación con el odontograma
 }
 
 model Appointment {
@@ -91,16 +94,22 @@ model InvoiceItem {
 model OdontogramEntry {
   id        String   @id @default(cuid())
   tooth     String
-  surface   String   @default("O") // O: Oclusal  (default para filas antiguas)
-  label     String
+  /// Superficie: O (Oclusal), M (Mesial), D (Distal), V (Vestibular/Bucal), P (Palatino) o L (Lingual).
+  /// Le dejamos default para no romper datos existentes en el push.
+  surface   String   @default("O")
+
+  label     String?
   color     String?
+
   patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   patientId String
-  createdAt DateTime @default(now())
 
-  // Cuando estés seguro de no tener duplicados:
-  // @@unique([patientId, tooth, surface], name: "patient_tooth_surface")
-}}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@unique([patientId, tooth, surface], name: "patient_tooth_surface")
+}
 
 model Dentist {
   id        Int      @id @default(autoincrement())
