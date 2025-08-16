@@ -93,8 +93,8 @@ model InvoiceItem {
 
 model OdontogramEntry {
   id        String       @id @default(cuid())
-  patient   Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
   patientId String
+  patient   Patient      @relation(fields: [patientId], references: [id])
   tooth     String
   surface   ToothSurface
   label     String
