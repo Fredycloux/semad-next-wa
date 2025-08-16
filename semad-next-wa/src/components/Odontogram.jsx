@@ -23,27 +23,28 @@ const ADULT_BOTTOM = ["48","47","46","45","44","43","42","41","31","32","33","34
 const CHILD_TOP    = ["55","54","53","52","51","61","62","63","64","65"];
 const CHILD_BOTTOM = ["85","84","83","82","81","71","72","73","74","75"];
 
-// superficies del diente (nomenclatura simple)
-const SURFACES = ["O", "M", "D", "V", "L"]; // Oclusal, Mesial, Distal, Vestibular, Lingual
+// superficies válidas (en BD: O, M, D, B, L)
+const SURFACES = ["O", "M", "D", "B", "L"];
 
 export default function Odontogram({ patientId, initialDentition = "ADULT", entries = [] }) {
   // estado UI
   const [dentition, setDentition] = useState(initialDentition === "CHILD" ? "CHILD" : "ADULT");
-  const [label, setLabel]   = useState(LABELS[0]);
-  const [color, setColor]   = useState(COLORS[0]);
+  const [label, setLabel]   = useState(LABELS[0]);          // diagnóstico para NUEVAS marcas
+  const [color, setColor]   = useState(COLORS[0]);          // color para NUEVAS marcas
   const [loading, setLoading] = useState(true);
 
   // mapa de marcas existentes: key = `${tooth}|${surface}` -> { id?, tooth, surface, label, color }
   const [marks, setMarks] = useState(() => {
     const m = new Map();
     (entries || []).forEach(e => {
-      const key = `${e.tooth}|${e.surface || "O"}`;
-      m.set(key, { ...e, surface: e.surface || "O" });
+      const s = (e.surface || "O").toUpperCase();
+      const key = `${e.tooth}|${s}`;
+      m.set(key, { ...e, surface: s });
     });
     return m;
   });
 
-  // cargar del servidor (siempre)
+  // cargar del servidor
   useEffect(() => {
     let alive = true;
     async function load() {
@@ -53,11 +54,11 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
         if (!alive) return;
         const m = new Map();
         (j.entries || []).forEach(e => {
-          const key = `${e.tooth}|${e.surface || "O"}`;
-          m.set(key, e);
+          const s = (e.surface || "O").toUpperCase();
+          m.set(`${e.tooth}|${s}`, { ...e, surface: s });
         });
         setMarks(m);
-      } catch (_) {
+      } catch {
         // ignora
       } finally {
         if (alive) setLoading(false);
@@ -81,14 +82,17 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
 
   // alternar una marca en diente/superficie
   async function toggleSurface(tooth, surface) {
-    const key = `${tooth}|${surface}`;
+    const s = surface.toUpperCase();
+    if (!SURFACES.includes(s)) return;
+
+    const key = `${tooth}|${s}`;
     const exists = marks.get(key);
 
     // Optimista
     setMarks(prev => {
       const m = new Map(prev);
       if (exists) m.delete(key);
-      else m.set(key, { tooth, surface, label, color });
+      else m.set(key, { tooth, surface: s, label, color }); // guarda el color seleccionado SOLO para la nueva marca
       return m;
     });
 
@@ -99,7 +103,7 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
         body: JSON.stringify({
           patientId,
           tooth,
-          surface,
+          surface: s,
           label,
           color,
           on: !exists, // crear o borrar
@@ -107,11 +111,13 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
       });
       const j = await res.json();
       if (!j.ok) throw new Error(j.error || "error");
-      // si creó, asegúrate de guardar el id retornado
+
+      // si creó, asegúrate de guardar el id/valores retornados (mantiene entry.color propio)
       if (!exists && j.entry) {
         setMarks(prev => {
           const m = new Map(prev);
-          m.set(key, j.entry);
+          const entry = { ...j.entry, surface: (j.entry.surface || s).toUpperCase() };
+          m.set(`${entry.tooth}|${entry.surface}`, entry);
           return m;
         });
       }
@@ -127,9 +133,9 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
     }
   }
 
-  // helper UI: devuelve true si la superficie está marcada
-  function isOn(tooth, surface) {
-    return marks.has(`${tooth}|${surface}`);
+  // helper: entry de una superficie
+  function getEntry(tooth, surface) {
+    return marks.get(`${tooth}|${surface}`);
   }
 
   // ---------- Diente SVG con 5 zonas ----------
@@ -144,22 +150,29 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
     const cx = (w - centerSize) / 2;
     const cy = (h - centerSize) / 2;
 
-    const fill = (surf) => (isOn(tooth, surf) ? (color || "#7c3aed") : "white");
-    const stroke = (surf) => (isOn(tooth, surf) ? (color || "#7c3aed") : "#CBD5E1");
+    // color propio de la marca (no el selector global)
+    const fill = (surf) => {
+      const entry = getEntry(tooth, surf);
+      return entry ? `${entry.color || "#7c3aed"}22` : "#ffffff";
+    };
+    const stroke = (surf) => {
+      const entry = getEntry(tooth, surf);
+      return entry ? (entry.color || "#7c3aed") : "#CBD5E1";
+    };
 
     return (
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
         {/* borde del diente */}
         <rect x="0.5" y="0.5" width={w-1} height={h-1} rx="8" ry="8" fill="#fff" stroke="#E5E7EB" />
 
-        {/* V = arriba */}
+        {/* B = arriba (Buccal/Vestibular) */}
         <rect
           x={pad} y={pad} width={w - pad * 2} height={side}
-          fill={fill("V")} stroke={stroke("V")}
-          onClick={() => toggleSurface(tooth, "V")}
+          fill={fill("B")} stroke={stroke("B")}
+          onClick={() => toggleSurface(tooth, "B")}
           style={{ cursor: "pointer" }}
         />
-        {/* L = abajo */}
+        {/* L = abajo (Lingual/Palatino) */}
         <rect
           x={pad} y={h - pad - side} width={w - pad * 2} height={side}
           fill={fill("L")} stroke={stroke("L")}
@@ -180,7 +193,7 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
           onClick={() => toggleSurface(tooth, "D")}
           style={{ cursor: "pointer" }}
         />
-        {/* O = centro */}
+        {/* O = centro (Oclusal/Incisal) */}
         <rect
           x={cx} y={cy} width={centerSize} height={centerSize} rx="6"
           fill={fill("O")} stroke={stroke("O")}
@@ -203,9 +216,9 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
     const pad = (arr) => {
       const total = 16, n = arr.length;
       const left = Math.floor((total - n) / 2);
-      return Array.from({ length: left }, () => null).concat(arr).concat(
-        Array.from({ length: total - left - n }, () => null)
-      );
+      return Array.from({ length: left }, () => null)
+        .concat(arr)
+        .concat(Array.from({ length: total - left - n }, () => null));
     };
     return [pad(CHILD_TOP), pad(CHILD_BOTTOM)];
   }, [dentition]);
