@@ -27,15 +27,13 @@ model Patient {
   insurer    String?
   allergies  String?
   history    String?
-  // nuevo (opcional, con default)
-  dentition  Dentition @default(ADULT)
-
+  dentition  String   @default("ADULT") // "ADULT" | "CHILD"
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  appointments  Appointment[]
-  invoices      Invoice[]
-  odontogram    OdontogramEntry[]
+  appointments   Appointment[]
+  invoices       Invoice[]
+  odontogram     OdontogramEntry[]
 }
 
 model Appointment {
@@ -91,12 +89,14 @@ model InvoiceItem {
 model OdontogramEntry {
   id        String   @id @default(cuid())
   tooth     String
-  surface   Surface?     // <— NUEVO (opcional)
-  label     String?
-  color     String?
+  surface   String   // "O" | "M" | "D" | "V" | "L"
+  label     String
+  color     String?  // hex #RRGGBB
   patient   Patient  @relation(fields: [patientId], references: [id])
   patientId String
   createdAt DateTime @default(now())
+
+  @@unique([patientId, tooth, surface], name: "patient_tooth_surface")
 }
 
 model Dentist {
