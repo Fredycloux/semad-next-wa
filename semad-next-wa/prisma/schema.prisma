@@ -92,17 +92,17 @@ model InvoiceItem {
 }
 
 model OdontogramEntry {
-  id        String        @id @default(cuid())
-  tooth     String
-  surface   ToothSurface  @default(WHOLE)   // default para no romper datos existentes
-  label     String
-  color     String
-  patient   Patient       @relation(fields: [patientId], references: [id])
+  id        String       @id @default(cuid())
+  patient   Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
   patientId String
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @default(now())   // <-- DEFAULT para arreglar el error
-  // Si más adelante quieres impedir duplicados exactos en una misma cara:
-  // @@unique([patientId, tooth, surface], name: "patient_tooth_surface")
+  tooth     String
+  surface   ToothSurface
+  label     String
+  color     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([patientId, tooth, surface], name: "patientId_tooth_surface")
 }
 
 model Dentist {
