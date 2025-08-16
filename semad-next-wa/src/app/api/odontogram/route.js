@@ -1,26 +1,41 @@
 // src/app/api/admin/odontogram/route.js
 import { prisma } from "@/lib/prisma";
 
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
-    const { patientId, tooth, label, color } = await req.json();
+    const { patientId, tooth, surface = "O", label, color, on = true } = await req.json();
 
     if (!patientId || !tooth) {
-      return Response.json({ ok: false, error: "Faltan campos" }, { status: 400 });
+      return Response.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
     }
 
-    // Si label es null => borrar marca del diente (simple)
-    if (label == null) {
-      await prisma.odontogramEntry.deleteMany({ where: { patientId, tooth } });
-      return Response.json({ ok: true });
+    // Borrar marca
+    if (!on) {
+      await prisma.odontogramEntry.deleteMany({ where: { patientId, tooth, surface } });
+      return Response.json({ ok: true, deleted: true });
     }
 
-    const entry = await prisma.odontogramEntry.create({
-      data: { patientId, tooth, label, color: color || "#7c3aed" },
+    // Upsert manual (no dependemos del @@unique)
+    const existing = await prisma.odontogramEntry.findFirst({
+      where: { patientId, tooth, surface },
+      select: { id: true },
     });
 
+    let entry;
+    if (existing) {
+      entry = await prisma.odontogramEntry.update({
+        where: { id: existing.id },
+        data: { label: label ?? "marcado", color: color ?? null },
+      });
+    } else {
+      entry = await prisma.odontogramEntry.create({
+        data: { patientId, tooth, surface, label: label ?? "marcado", color: color ?? null },
+      });
+    }
+
     return Response.json({ ok: true, entry });
-  } catch (e) {
+  } catch (e: any) {
     return Response.json({ ok: false, error: String(e.message || e) }, { status: 500 });
   }
 }
+
