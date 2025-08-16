@@ -1,27 +1,22 @@
 // src/app/admin/patients/[id]/page.jsx
 import { prisma } from "@/lib/prisma";
-import Odontogram from "@/components/Odontogram";
 import EditPatientForm from "@/components/EditPatientForm";
+import Odontogram from "@/components/Odontogram";
 
 export const dynamic = "force-dynamic";
 
-export default async function PatientPage({ params: { id } }: { params: { id: string } }) {
+export default async function PatientPage({ params }) {
+  const { id } = params;
+
   const patient = await prisma.patient.findUnique({
     where: { id },
     include: {
-      odontogram: true,
       appointments: { orderBy: { date: "desc" } },
+      odontogram: true,            // para precargar marcas si quieres
     },
   });
 
   if (!patient) return <div className="p-4">Paciente no encontrado.</div>;
-
-  const entries = (patient.odontogram ?? []).map((e) => ({
-    tooth: e.tooth,
-    surface: e.surface ?? "O",
-    label: e.label,
-    color: e.color ?? undefined,
-  }));
 
   return (
     <div className="space-y-6 p-4">
@@ -37,7 +32,11 @@ export default async function PatientPage({ params: { id } }: { params: { id: st
         <Odontogram
           patientId={patient.id}
           initialDentition={patient.dentition || "ADULT"}
-          entries={entries}
+          entries={
+            (patient.odontogram || []).map(o => ({
+              tooth: o.tooth, label: o.label, color: o.color, surface: o.surface
+            }))
+          }
         />
       </section>
 
@@ -47,7 +46,7 @@ export default async function PatientPage({ params: { id } }: { params: { id: st
           <div className="text-sm text-gray-500">Sin citas registradas.</div>
         ) : (
           <ul className="text-sm space-y-1">
-            {patient.appointments.map((a) => (
+            {patient.appointments.map(a => (
               <li key={a.id}>
                 {new Date(a.date).toLocaleString()} — {a.reason || "—"} {a.status && `· ${a.status}`}
               </li>
