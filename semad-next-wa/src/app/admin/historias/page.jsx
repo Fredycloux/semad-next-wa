@@ -13,10 +13,9 @@ export default async function HistoriasPage({ searchParams }) {
           OR: [
             { document: { contains: q, mode: "insensitive" } },
             { fullName: { contains: q, mode: "insensitive" } },
-            { phone: { contains: q } },
           ],
         },
-        orderBy: { fullName: "asc" },
+        select: { id: true, fullName: true, document: true, phone: true },
         take: 25,
       })
     : [];
@@ -43,10 +42,8 @@ export default async function HistoriasPage({ searchParams }) {
             <div className="text-sm text-gray-600">
               {p.document || "—"} · {p.phone || "—"}
             </div>
-            <Link
-              href={`/admin/patients/${p.id}`}
-              className="text-sm text-violet-700 hover:underline"
-            >
+            <div className="mt-2">
+            <Link href={`/admin/patients/${p.id}`} className="text-violet-600 hover:underline">
               Abrir historia
             </Link>
           </div>
