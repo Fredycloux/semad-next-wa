@@ -76,7 +76,7 @@ model Appointment {
   patient   Patient  @relation(fields: [patientId], references: [id])
   patientId String
 
-  @@index([patientId, date])
+  consultations Consultation[]
 }
 
 model InventoryItem {
@@ -99,6 +99,8 @@ model Procedure {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt // <-- valor por defecto para filas existentes
+
+  consultations ConsultationProcedure[]
 }
 
 model Invoice {
