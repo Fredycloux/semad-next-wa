@@ -12,6 +12,26 @@ enum Dentition {
   CHILD
 }
 
+enum Role {
+  ADMIN
+  ODONTOLOGO
+  RECEPCION
+}
+
+enum Surface {
+  O   // oclusal/incisal
+  M   // mesial
+  D   // distal
+  B   // vestibular/bucal
+  L   // lingual/palatina
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -55,6 +75,8 @@ model Appointment {
   status    String   @default("Programada")
   patient   Patient  @relation(fields: [patientId], references: [id])
   patientId String
+
+  @@index([patientId, date])
 }
 
 model InventoryItem {
@@ -76,7 +98,7 @@ model Procedure {
   invoices  InvoiceItem[]
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) // <-- valor por defecto para filas existentes
+  updatedAt DateTime @updatedAt // <-- valor por defecto para filas existentes
 }
 
 model Invoice {
@@ -109,6 +131,7 @@ model OdontogramEntry {
   updatedAt DateTime     @updatedAt
 
   @@unique([patientId, tooth, surface], name: "patientId_tooth_surface")
+  @@index([patientId])
 }
 
 model Dentist {
@@ -154,34 +177,4 @@ model ConsultationProcedure {
   procedureId    Int
 
   @@id([consultationId, procedureId])
-}
-
-enum Role {
-  ADMIN
-  ODONTOLOGO
-  RECEPCION
-}
-
-enum Surface {
-  O   // oclusal/incisal
-  M   // mesial
-  D   // distal
-  B   // vestibular/bucal
-  L   // lingual/palatina
-}
-
-
-enum ToothSurface {
-  WHOLE
-  OCCLUSAL
-  MESIAL
-  DISTAL
-  LINGUAL
-  VESTIBULAR
-}
-
-enum Sex {
-  MALE
-  FEMALE
-  OTHER
 }
