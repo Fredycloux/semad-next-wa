@@ -56,12 +56,7 @@ export default async function PatientPage({ params }) {
       {/* Nueva consulta (dejamos placeholder para no romper build; añadimos el componente en el siguiente bloque) */}
       <section className="rounded-xl border p-4">
         <div className="font-medium mb-3">Nueva consulta</div>
-        <div className="text-sm text-gray-500">
-          El formulario “Nueva consulta” se agrega en el siguiente paso.
-        </div>
-        {
-          <NewConsultationForm patientId={patient.id} />
-        }
+        <NewConsultationForm patientId={patient.id} />
       </section>
 
       {/* Consultas previas */}
