@@ -7,53 +7,48 @@ export async function POST(req) {
 
     const {
       patientId,
-      appointmentId,
-      date, // iso opcional
-      temperature,
-      pulse,
-      respRate,
-      systolicBP,
-      diastolicBP,
-      anamnesis,
-      diagnosis,
-      evolution,
-      prescription,
-      procedureIds = [],
+      appointmentId = null,
+      temperature = null,
+      pulse = null,
+      respRate = null,
+      systolicBP = null,
+      diastolicBP = null,
+      anamnesis = null,
+      diagnosis = null,
+      evolution = null,
+      prescription = null,
+      procedures = [], // [procedureId,...]
     } = body || {};
 
     if (!patientId) {
-      return Response.json({ ok: false, error: "Falta patientId" }, { status: 400 });
+      return Response.json({ ok: false, error: "patientId requerido" }, { status: 400 });
     }
 
-    // Validar IDs de procedimientos como enteros
-    const procIds = (procedureIds || [])
-      .map((x) => parseInt(x, 10))
-      .filter((n) => Number.isInteger(n));
+    const consultation = await prisma.consultation.create({
+      data: {
+        patientId,
+        appointmentId,
+        temperature: temperature ?? null,
+        pulse: pulse ?? null,
+        respRate: respRate ?? null,
+        systolicBP: systolicBP ?? null,
+        diastolicBP: diastolicBP ?? null,
+        anamnesis,
+        diagnosis,
+        evolution,
+        prescription,
+        procedures: {
+          create: (procedures || []).map(pid => ({
+            procedure: { connect: { id: Number(pid) } }
+          })),
+        },
+      },
+      include: {
+        procedures: { include: { procedure: true } },
+      },
+    });
 
-    const data = {
-      patientId: String(patientId),
-      appointmentId: appointmentId || null,
-      date: date ? new Date(date) : undefined,
-      temperature: typeof temperature === "number" ? temperature : undefined,
-      pulse: Number.isInteger(pulse) ? pulse : undefined,
-      respRate: Number.isInteger(respRate) ? respRate : undefined,
-      systolicBP: Number.isInteger(systolicBP) ? systolicBP : undefined,
-      diastolicBP: Number.isInteger(diastolicBP) ? diastolicBP : undefined,
-      anamnesis: anamnesis || undefined,
-      diagnosis: diagnosis || undefined,
-      evolution: evolution || undefined,
-      prescription: prescription || undefined,
-      procedures: procIds.length
-        ? {
-            create: procIds.map((id) => ({
-              procedure: { connect: { id } },
-            })),
-          }
-        : undefined,
-    };
-
-    const created = await prisma.consultation.create({ data });
-    return Response.json({ ok: true, id: created.id });
+    return Response.json({ ok: true, consultation });
   } catch (e) {
     return Response.json({ ok: false, error: String(e.message || e) }, { status: 500 });
   }
