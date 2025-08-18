@@ -48,7 +48,7 @@ model Patient {
   fullName     String
   document     String?
   phone        String?
-  email        String?
+  email        String?  @unique
   insurer      String?
   allergies    String?
   history      String?
