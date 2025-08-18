@@ -24,21 +24,27 @@ model User {
 }
 
 model Patient {
-  id          String             @id @default(cuid())
-  fullName    String
-  document    String?
-  phone       String?
-  email       String?
-  insurer     String?
-  allergies   String?
-  history     String?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id           String   @id @default(cuid())
+  fullName     String
+  document     String?
+  phone        String?
+  email        String?  @unique
+  insurer      String?
+  allergies    String?
+  history      String?
+  // NUEVOS
+  dateOfBirth  DateTime?
+  sex          Sex?
+  pregnant     Boolean?
 
   dentition   Dentition          @default(ADULT)
   appointments Appointment[]
   invoices     Invoice[]
   odontogram   OdontogramEntry[]  // <- relación con el odontograma
+  consultations Consultation[]   // NUEVO
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Appointment {
@@ -113,6 +119,43 @@ model Dentist {
   updatedAt DateTime @updatedAt
 }
 
+model Consultation {
+  id            String   @id @default(cuid())
+  date          DateTime @default(now())
+
+  patient       Patient  @relation(fields: [patientId], references: [id])
+  patientId     String
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  appointmentId String?
+
+  // examen físico
+  temperature   Float?
+  pulse         Int?
+  respRate      Int?
+  systolicBP    Int?
+  diastolicBP   Int?
+
+  // textos
+  anamnesis     String?
+  diagnosis     String?
+  evolution     String?
+  prescription  String?
+
+  procedures    ConsultationProcedure[]   // join con Procedure
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ConsultationProcedure {
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  consultationId String
+  procedure      Procedure    @relation(fields: [procedureId], references: [id])
+  procedureId    Int
+
+  @@id([consultationId, procedureId])
+}
+
 enum Role {
   ADMIN
   ODONTOLOGO
@@ -135,4 +178,10 @@ enum ToothSurface {
   DISTAL
   LINGUAL
   VESTIBULAR
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
 }
