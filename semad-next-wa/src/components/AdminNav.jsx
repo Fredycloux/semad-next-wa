@@ -6,6 +6,7 @@ import Image from "next/image";
 const items = [
   { href: "/admin/agenda",      label: "Agenda" },
   { href: "/admin/dentists",    label: "Odontólogos" },
+  { href: "/admin/historias",    label: "Historias" },
   { href: "/admin/procedures",  label: "Procedimientos" },
   { href: "/admin/inventory",   label: "Inventario" },
   { href: "/admin/invoices",    label: "Facturación" },
