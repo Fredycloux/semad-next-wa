@@ -1,6 +1,7 @@
 // src/app/admin/patients/[id]/page.jsx
 import { prisma } from "@/lib/prisma";
 import EditPatientForm from "@/components/EditPatientForm";
+import NewConsultationForm from "@/components/NewConsultationForm";
 import Odontogram from "@/components/Odontogram";
 
 export const dynamic = "force-dynamic";
@@ -58,11 +59,9 @@ export default async function PatientPage({ params }) {
         <div className="text-sm text-gray-500">
           El formulario “Nueva consulta” se agrega en el siguiente paso.
         </div>
-        {/*
-          Cuando tengamos el componente, descomenta estas dos líneas:
-          import NewConsultationForm from "@/components/NewConsultationForm";
+        {
           <NewConsultationForm patientId={patient.id} />
-        */}
+        }
       </section>
 
       {/* Consultas previas */}
