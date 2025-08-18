@@ -7,7 +7,10 @@ import Odontogram from "@/components/Odontogram";
 export const dynamic = "force-dynamic";
 
 export default async function PatientPage({ params }) {
-  const { id } = params;
+  const id = params?.id;                  // <= ojo aquí
+  if (!id || typeof id !== "string") {
+    return <div className="p-4">ID de paciente inválido.</div>;
+  }
 
   const patient = await prisma.patient.findUnique({
     where: { id },
