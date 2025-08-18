@@ -5,6 +5,7 @@ import NewConsultationForm from "@/components/NewConsultationForm";
 import Odontogram from "@/components/Odontogram";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export default async function PatientPage({ params }) {
   const id = params?.id;                  // <= ojo aquí
