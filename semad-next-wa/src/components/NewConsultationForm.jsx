@@ -1,7 +1,12 @@
+// src/components/NewConsultationForm.jsx
 "use client";
-import { useEffect, useMemo, useState } from "react";
 
-export default function NewConsultationForm({ patientId, onSaved }) {
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function NewConsultationForm({ patientId }) {
+  const router = useRouter();
+
   const [saving, setSaving] = useState(false);
   const [procedures, setProcedures] = useState([]);
   const [selected, setSelected] = useState(new Set());
@@ -19,7 +24,6 @@ export default function NewConsultationForm({ patientId, onSaved }) {
   });
 
   useEffect(() => {
-    // trae procedimientos activos
     fetch("/api/admin/procedures")
       .then((r) => r.json())
       .then((j) => setProcedures(Array.isArray(j) ? j : (j.procedures || [])))
@@ -43,32 +47,40 @@ export default function NewConsultationForm({ patientId, onSaved }) {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        patientId,
+        // convierto a número o null para que encaje con Prisma (Float/Int)
+        temperature: form.temperature === "" ? null : parseFloat(form.temperature),
+        pulse:       form.pulse === "" ? null : parseInt(form.pulse, 10),
+        respRate:    form.respRate === "" ? null : parseInt(form.respRate, 10),
+        systolicBP:  form.systolicBP === "" ? null : parseInt(form.systolicBP, 10),
+        diastolicBP: form.diastolicBP === "" ? null : parseInt(form.diastolicBP, 10),
+        anamnesis:   form.anamnesis || null,
+        diagnosis:   form.diagnosis || null,
+        evolution:   form.evolution || null,
+        prescription: form.prescription || null,
+        procedureIds: Array.from(selected),
+      };
+
       const res = await fetch("/api/admin/consultations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patientId,
-          temperature: form.temperature || null,
-          pulse: form.pulse || null,
-          respRate: form.respRate || null,
-          systolicBP: form.systolicBP || null,
-          diastolicBP: form.diastolicBP || null,
-          anamnesis: form.anamnesis,
-          diagnosis: form.diagnosis,
-          evolution: form.evolution,
-          prescription: form.prescription,
-          procedureIds: Array.from(selected),
-        }),
+        body: JSON.stringify(payload),
       });
       const j = await res.json();
       if (!j.ok) throw new Error(j.error || "Error guardando");
+
       alert("Consulta guardada");
+
+      // limpiar el form
       setSelected(new Set());
       setForm({
         temperature: "", pulse: "", respRate: "", systolicBP: "", diastolicBP: "",
         anamnesis: "", diagnosis: "", evolution: "", prescription: "",
       });
-      onSaved?.(j.consultation);
+
+      // refresca la página (Server Component) para que aparezca la consulta en la lista
+      router.refresh();
     } catch (err) {
       alert(err.message);
     } finally {
@@ -87,28 +99,43 @@ export default function NewConsultationForm({ patientId, onSaved }) {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <label className="space-y-1">
           <span className="text-xs text-gray-500">Temperatura (°C)</span>
-          <input name="temperature" value={form.temperature} onChange={onField}
-                 className="border rounded-lg px-3 py-2 w-full" />
+          <input
+            type="number" step="0.1" inputMode="decimal"
+            name="temperature" value={form.temperature} onChange={onField}
+            className="border rounded-lg px-3 py-2 w-full" autoComplete="off"
+          />
         </label>
         <label className="space-y-1">
           <span className="text-xs text-gray-500">Pulso (lpm)</span>
-          <input name="pulse" value={form.pulse} onChange={onField}
-                 className="border rounded-lg px-3 py-2 w-full" />
+          <input
+            type="number" inputMode="numeric"
+            name="pulse" value={form.pulse} onChange={onField}
+            className="border rounded-lg px-3 py-2 w-full" autoComplete="off"
+          />
         </label>
         <label className="space-y-1">
           <span className="text-xs text-gray-500">Respiración (rpm)</span>
-          <input name="respRate" value={form.respRate} onChange={onField}
-                 className="border rounded-lg px-3 py-2 w-full" />
+          <input
+            type="number" inputMode="numeric"
+            name="respRate" value={form.respRate} onChange={onField}
+            className="border rounded-lg px-3 py-2 w-full" autoComplete="off"
+          />
         </label>
         <label className="space-y-1">
           <span className="text-xs text-gray-500">TA Sistólica</span>
-          <input name="systolicBP" value={form.systolicBP} onChange={onField}
-                 className="border rounded-lg px-3 py-2 w-full" />
+          <input
+            type="number" inputMode="numeric"
+            name="systolicBP" value={form.systolicBP} onChange={onField}
+            className="border rounded-lg px-3 py-2 w-full" autoComplete="off"
+          />
         </label>
         <label className="space-y-1">
           <span className="text-xs text-gray-500">TA Diastólica</span>
-          <input name="diastolicBP" value={form.diastolicBP} onChange={onField}
-                 className="border rounded-lg px-3 py-2 w-full" />
+          <input
+            type="number" inputMode="numeric"
+            name="diastolicBP" value={form.diastolicBP} onChange={onField}
+            className="border rounded-lg px-3 py-2 w-full" autoComplete="off"
+          />
         </label>
       </div>
 
