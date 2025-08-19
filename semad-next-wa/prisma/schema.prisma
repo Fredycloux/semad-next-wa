@@ -110,13 +110,20 @@ model Procedure {
   consultations ConsultationProcedure[]
 }
 
+// Sencillo “contador” para folios.
+model Counter {
+  name  String @id
+  value Int    @default(0)
+}
+
 model Invoice {
   id        String       @id @default(cuid())
+  folio     String       @unique            // <-- NUEVO
   date      DateTime     @default(now())
   patient   Patient      @relation(fields: [patientId], references: [id])
   patientId String
   items     InvoiceItem[]
-  total     Int?         // <-- total de la factura (en COP)
+  total     Int          @default(0)       // total en COP
 }
 
 model InvoiceItem {
