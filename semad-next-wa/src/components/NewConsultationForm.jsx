@@ -161,7 +161,7 @@ useEffect(() => {
       </label>
 
       <label className="space-y-1 block">
-        <span className="text-xs text-gray-500">Evolución</span>
+        <span className="text-xs text-gray-500">Plan de tratamiento / Tratamiento</span>
         <textarea name="evolution" value={form.evolution} onChange={onField}
                   rows={2} className="border rounded-lg px-3 py-2 w-full" />
       </label>
