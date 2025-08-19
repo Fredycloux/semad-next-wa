@@ -23,18 +23,20 @@ export default function NewConsultationForm({ patientId }) {
     prescription: "",
   });
 
-    useEffect(() => {
-      fetch("/api/admin/procedures", { cache: "no-store" })
-        .then(r => r.json())
-        .then(j => {
-          const list = Array.isArray(j) ? j : (j.procedures || []);
-          setProcedures(list);
-        })
-        .catch(err => {
-          console.error("Error cargando procedimientos:", err);
-          setProcedures([]);
-        });
-    }, []);
+useEffect(() => {
+  // trae procedimientos activos
+  fetch("/api/admin/procedures")
+    .then(r => r.json())
+    .then(j => {
+      const list = Array.isArray(j) ? j : (j.items || j.procedures || []);
+      setProcedures(Array.isArray(list) ? list : []);
+    })
+    .catch(err => {
+      console.error("No se pudo cargar procedimientos:", err);
+      setProcedures([]);
+    });
+}, []);
+
 
   function onField(e) {
     const { name, value } = e.target;
