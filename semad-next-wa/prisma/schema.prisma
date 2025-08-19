@@ -111,11 +111,12 @@ model Procedure {
 }
 
 model Invoice {
-  id        String   @id @default(cuid())
-  date      DateTime @default(now())
-  patient   Patient  @relation(fields: [patientId], references: [id])
+  id        String       @id @default(cuid())
+  date      DateTime     @default(now())
+  patient   Patient      @relation(fields: [patientId], references: [id])
   patientId String
   items     InvoiceItem[]
+  total     Int?         // <-- total de la factura (en COP)
 }
 
 model InvoiceItem {
@@ -130,7 +131,9 @@ model InvoiceItem {
 
   procedure     Procedure @relation(fields: [procedureCode], references: [code])
   procedureCode String
-  invoice       Invoice   @relation(fields: [invoiceId], references: [id])
+  unitPrice     Int        @default(0) // <-- precio unitario facturado (en COP)
+  subtotal      Int        @default(0) // <-- quantity * unitPrice
+  invoice       Invoice    @relation(fields: [invoiceId], references: [id])
   invoiceId     String
 }
 
