@@ -94,11 +94,18 @@ model Procedure {
   id        Int      @id @default(autoincrement())
   code      String   @unique
   name      String
-  price     Int
+
+  // PRECIO
+  price     Int?         // precio fijo sugerido (null si usas rango)
+  variable  Boolean @default(false)
+  minPrice  Int?         // “desde”
+  maxPrice  Int?         // “hasta” (opcional)
+  unit      String?      // p.ej. "c/u", "pieza", etc.
+
   invoices  InvoiceItem[]
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt // <-- valor por defecto para filas existentes
+  updatedAt DateTime @updatedAt
 
   consultations ConsultationProcedure[]
 }
@@ -115,6 +122,12 @@ model InvoiceItem {
   id            String    @id @default(cuid())
   quantity      Int       @default(1)
   tooth         String?
+
+  // guarda el precio que realmente cobraste (necesario si hay rango)
+  unitPrice     Int       @default(0)
+  total         Int       @default(0)   // opcional, o calcúlalo en el server
+  notes         String?   // p.ej. "multirradicular", "cordal", etc.
+
   procedure     Procedure @relation(fields: [procedureCode], references: [code])
   procedureCode String
   invoice       Invoice   @relation(fields: [invoiceId], references: [id])
