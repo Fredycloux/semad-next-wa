@@ -125,7 +125,6 @@ model InvoiceItem {
   tooth         String?
 
   // guarda el precio que realmente cobraste (necesario si hay rango)
-  unitPrice     Int       @default(0)
   total         Int       @default(0)   // opcional, o calcúlalo en el server
   notes         String?   // p.ej. "multirradicular", "cordal", etc.
 
