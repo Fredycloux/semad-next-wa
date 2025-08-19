@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export default async function PatientPage({ params }) {
-  const id = params?.id;                  // <= ojo aquí
+  const id = params?.id;
   if (!id || typeof id !== "string") {
     return <div className="p-4">ID de paciente inválido.</div>;
   }
@@ -17,12 +17,10 @@ export default async function PatientPage({ params }) {
     where: { id },
     include: {
       appointments: { orderBy: { date: "desc" } },
-      odontogram: true, // para precargar marcas del odontograma
+      odontogram: true,
       consultations: {
         orderBy: { date: "desc" },
-        include: {
-          procedures: { include: { procedure: true } }, // nombres de procedimientos
-        },
+        include: { procedures: { include: { procedure: true } } },
       },
     },
   });
@@ -31,7 +29,6 @@ export default async function PatientPage({ params }) {
 
   return (
     <div className="space-y-6 p-4">
-      {/* Encabezado */}
       <div>
         <h1 className="text-xl font-semibold">Historia clínica</h1>
         <p className="text-sm text-gray-500">
@@ -39,10 +36,8 @@ export default async function PatientPage({ params }) {
         </p>
       </div>
 
-      {/* Datos del paciente */}
       <EditPatientForm patient={patient} />
 
-      {/* Odontograma */}
       <section className="rounded-xl border p-4">
         <div className="font-medium mb-2">Odontograma</div>
         <Odontogram
@@ -57,16 +52,12 @@ export default async function PatientPage({ params }) {
         />
       </section>
 
-      {/* Nueva consulta (dejamos placeholder para no romper build; añadimos el componente en el siguiente bloque) */}
       <section className="rounded-xl border p-4">
         <div className="font-medium mb-3">Nueva consulta</div>
-          <NewConsultationForm
-            patientId={patient.id}
-            onSaved={() => location.reload()}
-        />
+        {/* NO pasar funciones desde el server */}
+        <NewConsultationForm patientId={patient.id} />
       </section>
 
-      {/* Consultas previas */}
       <section className="rounded-xl border p-4">
         <div className="font-medium mb-2">Consultas previas</div>
         {patient.consultations.length === 0 ? (
@@ -79,19 +70,14 @@ export default async function PatientPage({ params }) {
                   {new Date(c.date).toLocaleString()}
                 </div>
 
-                {/* Diagnóstico */}
-                <div className="text-gray-700">
-                  {c.diagnosis || "—"}
-                </div>
+                <div className="text-gray-700">{c.diagnosis || "—"}</div>
 
-                {/* Procedimientos realizados en esa consulta */}
                 {c.procedures?.length > 0 && (
                   <div className="text-gray-600">
                     {c.procedures.map((cp) => cp.procedure.name).join(", ")}
                   </div>
                 )}
 
-                {/* Signos vitales si existen */}
                 {(c.temperature || c.pulse || (c.systolicBP && c.diastolicBP) || c.respRate) && (
                   <div className="text-gray-500">
                     {c.temperature ? `Temp ${c.temperature}°C · ` : ""}
@@ -101,7 +87,6 @@ export default async function PatientPage({ params }) {
                   </div>
                 )}
 
-                {/* Textos largos si existen */}
                 {(c.anamnesis || c.evolution || c.prescription) && (
                   <div className="mt-1 space-y-1 text-gray-600">
                     {c.anamnesis && <div><span className="font-medium">Anamnesis:</span> {c.anamnesis}</div>}
@@ -115,7 +100,6 @@ export default async function PatientPage({ params }) {
         )}
       </section>
 
-      {/* Citas */}
       <section className="rounded-xl border p-4">
         <div className="font-medium mb-2">Citas</div>
         {patient.appointments.length === 0 ? (
@@ -124,8 +108,7 @@ export default async function PatientPage({ params }) {
           <ul className="text-sm space-y-1">
             {patient.appointments.map((a) => (
               <li key={a.id}>
-                {new Date(a.date).toLocaleString()} — {a.reason || "—"}{" "}
-                {a.status && `· ${a.status}`}
+                {new Date(a.date).toLocaleString()} — {a.reason || "—"} {a.status && `· ${a.status}`}
               </li>
             ))}
           </ul>
