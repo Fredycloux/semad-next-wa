@@ -126,12 +126,12 @@ export default function EditPatientForm({ patient }) {
 
         <label className="space-y-1 sm:col-span-2">
           <span className="text-xs text-gray-500">Alergias</span>
-          <input name="allergies" value={form.allergies} onChange={onChange}
-                 className="border rounded-lg px-3 py-2 w-full" />
+          <textarea name="allergies" value={form.allergies} onChange={onChange}
+                 rows={3} className="border rounded-lg px-3 py-2 w-full" />
         </label>
 
         <label className="space-y-1 sm:col-span-2">
-          <span className="text-xs text-gray-500">Antecedentes / Notas</span>
+          <span className="text-xs text-gray-500">Antecedentes médicos y odontológicos</span>
           <textarea name="history" value={form.history} onChange={onChange}
                     rows={3} className="border rounded-lg px-3 py-2 w-full" />
         </label>
