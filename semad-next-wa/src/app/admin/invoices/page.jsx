@@ -73,10 +73,6 @@ export default function InvoicesPage(){
 
   const total = useMemo(()=> lines.reduce((s,l)=> s + (Number(l.quantity||0)*Number(l.unitPrice||0)), 0), [lines]);
 
-  async function save(){
-    if (!patient) { alert("Selecciona un paciente"); return; }
-    if (lines.length===0){ alert("Agrega al menos un ítem"); return; }
-
 async function save() {
     if (!patient) { alert("Selecciona un paciente"); return; }
     if (lines.length === 0) { alert("Agrega al menos un ítem"); return; }
