@@ -15,7 +15,6 @@ async function nextFolio(tx) {
 }
 
 export async function GET() {
-  // Rellena TODAS las facturas con folio NULL (no espera id)
   const updated = await prisma.$transaction(async (tx) => {
     const pending = await tx.invoice.findMany({ where: { folio: null } });
     let count = 0;
@@ -26,5 +25,6 @@ export async function GET() {
     }
     return count;
   });
+
   return Response.json({ ok: true, updated });
 }
