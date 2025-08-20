@@ -18,7 +18,9 @@
     "bcryptjs": "2.4.3",
     "framer-motion": "10.18.0",
     "lucide-react": "0.441.0",
-    "recharts": "2.9.0"
+    "recharts": "2.9.0",
+    "pdfkit": "^0.13.0",
+    "qrcode": "^1.5.3"
   },
   "devDependencies": {
     "autoprefixer": "10.4.19",
