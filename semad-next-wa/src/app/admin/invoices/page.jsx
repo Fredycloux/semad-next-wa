@@ -78,37 +78,37 @@ export default function InvoicesPage(){
     if (lines.length===0){ alert("Agrega al menos un ítem"); return; }
 
 async function save() {
-  if (!patient) { alert("Selecciona un paciente"); return; }
-  if (lines.length===0){ alert("Agrega al menos un ítem"); return; }
+    if (!patient) { alert("Selecciona un paciente"); return; }
+    if (lines.length === 0) { alert("Agrega al menos un ítem"); return; }
 
-  setSaving(true);
-  try{
-    const payload = {
-      patientId: patient.id,
-      items: lines.map(l=>({
-        procedureCode: l.procedureCode,
-        quantity: Number(l.quantity||1),
-        tooth: l.tooth || null,
-        unitPrice: Number(l.unitPrice||0),
-      })),
-    };
-    const r = await fetch("/api/admin/invoices",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify(payload),
-    });
-    const j = await r.json();
-    if(!j.ok) throw new Error(j.error || "No se pudo guardar");
+    setSaving(true);
+    try {
+      const payload = {
+        patientId: patient.id,
+        items: lines.map(l => ({
+          procedureCode: l.procedureCode,
+          quantity: Number(l.quantity || 1),
+          tooth: l.tooth || null,
+          unitPrice: Number(l.unitPrice || 0),
+        })),
+      };
 
-    // <<< aquí la redirección al detalle >>>
-    location.href = `/admin/invoices/${j.invoice.id}`;
-  }catch(e){
-    alert(e.message);
-  }finally{
-    setSaving(false);
+      const r = await fetch("/api/admin/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || "No se pudo guardar");
+
+      // ⬇⬇ Redirige al detalle de la factura
+      location.href = `/admin/invoices/${j.invoice.id}`;
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setSaving(false);
+    }
   }
-}
-
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-6">
@@ -268,3 +268,6 @@ async function save() {
     </div>
   );
 }
+}
+
+export default InvoicesPage; 
