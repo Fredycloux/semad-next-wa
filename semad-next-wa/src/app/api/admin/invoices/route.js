@@ -1,10 +1,32 @@
+// src/app/api/admin/invoices/route.js
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
+// helpers
 function intOrNull(v) {
   if (v === null || v === undefined || v === "") return null;
   return Number(v);
 }
 
+// Folio tipo FAC-2025-000123 (contador por año)
+async function nextFolio() {
+  return await prisma.$transaction(async (tx) => {
+    const year = new Date().getFullYear();
+    const key = `invoice-${year}`;
+
+    const c = await tx.counter.upsert({
+      where: { name: key },
+      update: { value: { increment: 1 } },
+      create: { name: key, value: 1 },
+    });
+
+    const num = String(c.value).padStart(6, "0");
+    return `FAC-${year}-${num}`;
+  });
+}
+
+// Listado para “recientes”
 export async function GET() {
   const items = await prisma.invoice.findMany({
     orderBy: { date: "desc" },
@@ -16,6 +38,7 @@ export async function GET() {
   return Response.json({ ok: true, items });
 }
 
+// Crear factura con: validación, precios, total y folio
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -28,12 +51,12 @@ export async function POST(req) {
       return Response.json({ ok: false, error: "Debes agregar al menos un ítem" }, { status: 400 });
     }
 
-    // precarga procedimientos para validar/preciar
-    const codes = items.map(i => String(i.procedureCode));
+    // Pre-carga de procedimientos para validar y tomar precio
+    const codes = items.map((i) => String(i.procedureCode));
     const procs = await prisma.procedure.findMany({ where: { code: { in: codes } } });
-    const map = new Map(procs.map(p => [p.code, p]));
+    const map = new Map(procs.map((p) => [p.code, p]));
 
-    // normaliza y calcula subtotales
+    // Normalización + subtotales
     let total = 0;
     const toCreate = items.map((it) => {
       const proc = map.get(String(it.procedureCode));
@@ -42,10 +65,8 @@ export async function POST(req) {
       const quantity = Number(it.quantity ?? 1) || 1;
       let unitPrice = intOrNull(it.unitPrice);
 
-      // si no vino unitPrice, usamos precio del procedimiento
       if (unitPrice == null) {
         if (proc.variable) {
-          // para variables exigimos precio
           unitPrice = intOrNull(proc.minPrice);
           if (unitPrice == null) {
             throw new Error(`Precio requerido para ${proc.name}`);
@@ -67,13 +88,22 @@ export async function POST(req) {
       };
     });
 
+    // Folio consecutivo
+    const folio = await nextFolio();
+
+    // Crear factura + items
     const invoice = await prisma.invoice.create({
       data: {
+        folio,
         patientId: String(patientId),
         total,
-        items: { createMany: { data: toCreate } },
+        // importante: usar create (no createMany) para poder incluir/retornar
+        items: { create: toCreate },
       },
-      include: { items: true },
+      include: {
+        patient: true,
+        items: { include: { procedure: true } },
+      },
     });
 
     return Response.json({ ok: true, invoice });
