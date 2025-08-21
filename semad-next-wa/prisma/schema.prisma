@@ -32,6 +32,14 @@ enum Sex {
   OTHER
 }
 
+enum MovementType {
+  PURCHASE   // ingreso por compra
+  USE        // egreso por uso/consumo
+  ADJUSTMENT // ajuste manual (+/-)
+  WASTE      // merma/daño
+  RETURN     // devoluciones
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -80,14 +88,36 @@ model Appointment {
 }
 
 model InventoryItem {
-  id      String @id @default(cuid())
-  name    String
-  code    String @unique
-  unit    String?
-  stock   Int    @default(0)
-  minimum Int    @default(0)
-  cost    Int    @default(0)
-  price   Int    @default(0)
+  id        String   @id @default(cuid())
+  sku       String?  @unique
+  name      String
+  category  String?
+  unit      String?          // uds, ml, cajas, etc.
+  minStock  Int      @default(0)
+  stock     Int      @default(0) // denormalizado para consultas rápidas
+  avgCost   Int      @default(0) // costo promedio (COP enteros)
+  lastCost  Int      @default(0) // último costo de compra
+  note      String?
+  active    Boolean  @default(true)
+
+  movements InventoryMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InventoryMovement {
+  id        String       @id @default(cuid())
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type      MovementType
+  quantity  Int           // + para ingresos, - para egresos
+  unitCost  Int?          // costo unitario cuando aplique (p.ej. compras)
+  ref       String?       // referencia: factura proveedor, folio, etc.
+  note      String?
+  createdAt DateTime      @default(now())
+
+  @@index([itemId, createdAt])
 }
 
 model Procedure {
