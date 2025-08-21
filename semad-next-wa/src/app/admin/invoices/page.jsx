@@ -310,31 +310,50 @@ export default function InvoicesPage() {
       </section>
 
       {/* Recientes */}
-      <section className="rounded-xl border p-4 space-y-2">
-        <div className="font-medium">Facturas recientes</div>
-        {recent.length === 0 ? (
-          <div className="text-sm text-gray-500">Aún no hay facturas.</div>
-        ) : (
-          <ul className="text-sm divide-y">
-            {recent.slice(0, 10).map((f) => (
-              <li key={f.id} className="py-2 flex items-center justify-between">
-                <div>
-                  <div className="font-medium">
-                    {new Date(f.date).toLocaleString()}
-                  </div>
-                  <div className="text-gray-600">
-                    {f.patient?.fullName || "—"}{" "}
-                    {f.patient?.document ? `· ${f.patient.document}` : ""}
-                  </div>
-                </div>
-                <div className="font-semibold">
-                  $ {fmt(f.total || f.items.reduce((s, it) => s + (it.subtotal || 0), 0))}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+<section className="rounded-xl border p-4 space-y-2">
+  <div className="flex items-center justify-between">
+    <div className="font-medium">Facturas recientes</div>
+    {/* Si luego haces un listado general, puedes enlazarlo aquí */}
+    {/* <a href="/admin/invoices/all" className="text-sm text-violet-700 hover:underline">Ver todas</a> */}
+  </div>
+
+  {recent.length === 0 ? (
+    <div className="text-sm text-gray-500">Aún no hay facturas.</div>
+  ) : (
+    <ul className="text-sm divide-y">
+      {recent.slice(0, 10).map((f) => (
+        <li key={f.id} className="py-2 flex items-center justify-between">
+          <a
+            href={`/admin/invoices/${f.id}`}
+            className="group flex-1 min-w-0"
+            title="Abrir detalle"
+          >
+            <div className="font-medium group-hover:underline truncate">
+              {new Date(f.date).toLocaleString()}
+            </div>
+            <div className="text-gray-600 truncate">
+              {f.patient?.fullName || "—"}
+              {f.patient?.document ? ` · ${f.patient.document}` : ""}
+            </div>
+          </a>
+
+          <div className="flex items-center gap-3 pl-3">
+            <div className="font-semibold whitespace-nowrap">
+              $ {fmt(f.total || f.items.reduce((s, it) => s + (it.subtotal || 0), 0))}
+            </div>
+            <a
+              href={`/admin/invoices/${f.id}`}
+              className="rounded-md bg-violet-600 px-3 py-1.5 text-white text-xs hover:opacity-95"
+            >
+              Ver
+            </a>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )}
+</section>
+
     </div>
   );
 }
