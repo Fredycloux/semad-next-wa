@@ -47,7 +47,7 @@ export async function GET(req, { params }) {
   if (logoBuf) {
     doc.image(logoBuf, left, headerY, { width: 110 });
   }
-  doc.font("Helvetica-Bold").fontSize(22).text("SEMAD", left + (logoBuf ? 120 : 0), headerY);
+  doc.font("Helvetica-Bold").fontSize(22).text("", left + (logoBuf ? 120 : 0), headerY);
 
   // Info factura + QR a la derecha
   const qrW = 120;
