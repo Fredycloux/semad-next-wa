@@ -1,31 +1,32 @@
+// src/app/api/admin/invoices/[id]/qr/route.js
 import { prisma } from "@/lib/prisma";
 import QRCode from "qrcode";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export async function GET(_req, { params }) {
-  const id = params?.id;
-  if (!id) return new Response("id requerido", { status: 400 });
+export async function GET(req, { params }) {
+  try {
+    const id = params?.id;
+    const inv = await prisma.invoice.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!inv) return new Response("Factura no encontrada", { status: 404 });
 
-  const inv = await prisma.invoice.findUnique({
-    where: { id },
-    select: { id: true, folio: true, total: true, date: true },
-  });
-  if (!inv) return new Response("No existe", { status: 404 });
+    const origin = new URL(req.url).origin;
+    const url = `${origin}/admin/invoices/${id}`;
 
-  // El contenido del QR: puedes ajustar al URL público de tu despliegue
-  const base = process.env.NEXT_PUBLIC_BASE_URL || "";
-  const url = `${base}/admin/invoices/${inv.id}`;
+    const png = await QRCode.toBuffer(url, { width: 256, margin: 0 });
 
-  const png = await QRCode.toBuffer(
-    JSON.stringify({ folio: inv.folio, total: inv.total, url }),
-    { type: "png", width: 320, margin: 1 }
-  );
-
-  return new Response(png, {
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "no-store",
-    },
-  });
+    return new Response(png, {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
+      },
+    });
+  } catch (e) {
+    return new Response("QR error: " + String(e?.message || e), { status: 500 });
+  }
 }
