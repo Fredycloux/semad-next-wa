@@ -8,10 +8,11 @@ export const dynamic = "force-dynamic";
 
 const money = (n) => new Intl.NumberFormat("es-CO").format(Number(n || 0));
 
-// Paleta (violeta estilo Tailwind)
-const BRAND = "#7c3aed";        // violet-600
-const BRAND_LIGHT = "#f5f3ff";  // violet-50
-const TEXT_MUTED = "#6b7280";   // slate-500
+// Colores y tamaños compactos
+const BRAND = "#7c3aed";        // violeta
+const BRAND_LIGHT = "#f5f3ff";  // violeta muy claro
+const TEXT_MUTED = "#6b7280";   // gris
+const FONT = { base: 10, small: 9, hdr: 11 };
 
 export async function GET(req, { params }) {
   const id = params?.id;
@@ -26,82 +27,81 @@ export async function GET(req, { params }) {
   const origin = req.nextUrl.origin;
   const detailUrl = new URL(`/admin/invoices/${inv.id}`, origin).toString();
 
-  // QR PNG
-  const qrDataUrl = await QRCode.toDataURL(detailUrl, { margin: 0, scale: 6 });
+  // QR compacto y nítido
+  const qrDataUrl = await QRCode.toDataURL(detailUrl, { margin: 0, scale: 4 });
   const qrBuf = Buffer.from(qrDataUrl.split(",")[1], "base64");
 
-  // Logo (opcional) - ajusta el path si tu archivo se llama distinto
+  // Logo (opcional)
   let logoBuf = null;
   try {
     const r = await fetch(new URL("/logo_semad.png", origin));
     if (r.ok) logoBuf = Buffer.from(await r.arrayBuffer());
-  } catch (_) {}
+  } catch {}
 
   // PDF
   const doc = new PDFDocument({ size: "A4", margin: 50 });
   const stream = new PassThrough();
   doc.pipe(stream);
 
-  // Dimensiones útiles
-  const left = doc.page.margins.left;                  // 50
-  const right = doc.page.width - doc.page.margins.right; // 545
-  const width = right - left;                          // 495
+  const left = doc.page.margins.left;
+  const right = doc.page.width - doc.page.margins.right;
+  const width = right - left;
 
-  // ======= Header =======
-  const topY = 40;
+  // ======= HEADER COMPACTO =======
+  const topY = 36;
+  const logoW = logoBuf ? 120 : 0;
+  const gutter = logoBuf ? 18 : 0;
 
-  // Logo a la izquierda
-  if (logoBuf) doc.image(logoBuf, left, topY, { width: 140 });
+  if (logoBuf) doc.image(logoBuf, left, topY, { width: logoW });
 
-  // QR a la derecha
-  const qrW = 130;
+  // QR reducido y alineado a la derecha
+  const qrW = 100;
   const qrX = right - qrW;
-  const qrY = topY + 10;
+  const qrY = topY;
   doc.image(qrBuf, qrX, qrY, { width: qrW });
 
-  // Tarjeta con info de la factura (izquierda del QR)
-  const infoX = left + (logoBuf ? 150 : 0);
-  const infoW = qrX - infoX - 16;
-  const infoH = 70;
+  // Tarjeta “Factura / Fecha” entre logo y QR
+  const infoX = left + logoW + gutter;
+  const infoW = Math.max(240, qrX - 16 - infoX); // deja aire con el QR
+  const infoH = 56;
 
   doc.save()
     .roundedRect(infoX, topY, infoW, infoH, 8)
     .fillAndStroke(BRAND_LIGHT, BRAND);
   doc.restore();
 
-  doc.font("Helvetica-Bold").fontSize(12).fillColor(BRAND)
+  doc.font("Helvetica-Bold").fontSize(FONT.hdr).fillColor(BRAND)
     .text("Factura", infoX + 12, topY + 10);
-  doc.font("Helvetica").fillColor("black")
-    .text(inv.folio || inv.id, infoX + 90, topY + 10);
+  doc.font("Helvetica").fontSize(FONT.hdr).fillColor("black")
+    .text(inv.folio || inv.id, infoX + 82, topY + 10);
 
-  doc.font("Helvetica-Bold").fillColor(BRAND)
+  doc.font("Helvetica-Bold").fontSize(FONT.hdr).fillColor(BRAND)
     .text("Fecha", infoX + 12, topY + 32);
-  doc.font("Helvetica").fillColor("black")
-    .text(new Date(inv.date).toLocaleString("es-CO"), infoX + 90, topY + 32);
+  doc.font("Helvetica").fontSize(FONT.base).fillColor("black")
+    .text(new Date(inv.date).toLocaleString("es-CO"), infoX + 82, topY + 32);
 
-  // ==== Paciente ====
-  let y = topY + Math.max(infoH, qrW / 1.8) + 20;
+  // ======= PACIENTE =======
+  let y = Math.max(topY + infoH, qrY + qrW) + 18;
 
-  doc.font("Helvetica-Bold").fontSize(12).fillColor("black")
+  doc.font("Helvetica-Bold").fontSize(FONT.hdr).fillColor("black")
     .text("Paciente:", left, y);
-  doc.font("Helvetica").fontSize(12)
-    .text(inv.patient?.fullName || "—", left + 80, y);
-  y += 16;
-  doc.fillColor(TEXT_MUTED).fontSize(11)
+  doc.font("Helvetica").fontSize(FONT.hdr)
+    .text(inv.patient?.fullName || "—", left + 76, y);
+
+  y += 15;
+  doc.fillColor(TEXT_MUTED).fontSize(FONT.base)
     .text(
       `Doc: ${inv.patient?.document || "—"}${inv.patient?.phone ? `  ·  ${inv.patient.phone}` : ""}`,
-      left + 80,
+      left + 76,
       y
     );
-  y += 24;
 
-  // Separador
+  y += 16;
   doc.moveTo(left, y).lineTo(right, y).lineWidth(0.5).strokeColor("#d1d5db").stroke();
-  y += 10;
+  y += 8;
 
-  // ======= Tabla =======
-  // Definimos columnas
-  const colW = { code: 66, tooth: 44, qty: 44, unit: 90, sub: 100 };
+  // ======= TABLA COMPACTA =======
+  const colW = { code: 62, tooth: 40, qty: 40, unit: 86, sub: 96 };
   const gap = 10;
 
   const xSub   = right - colW.sub;
@@ -112,47 +112,37 @@ export async function GET(req, { params }) {
   const xName  = xCode + colW.code + gap;
   const wName  = xTooth - xName - gap;
 
-  // Encabezado con fondo de color
-  const headH = 22;
-  doc.save()
-    .rect(left, y, width, headH)
-    .fill(BRAND);
-  doc.restore();
+  // Encabezado con fondo
+  const headH = 20;
+  doc.save().rect(left, y, width, headH).fill(BRAND).restore();
 
-  doc.fillColor("white").font("Helvetica-Bold").fontSize(11)
-    .text("Código", xCode + 4, y + 5)
-    .text("Procedimiento", xName + 2, y + 5)
-    .text("Diente", xTooth, y + 5, { width: colW.tooth })
-    .text("Cant.", xQty, y + 5, { width: colW.qty, align: "right" })
-    .text("P. unitario", xUnit, y + 5, { width: colW.unit, align: "right" })
-    .text("Subtotal", xSub, y + 5, { width: colW.sub, align: "right" });
+  doc.fillColor("white").font("Helvetica-Bold").fontSize(FONT.base)
+    .text("Código", xCode + 4, y + 4)
+    .text("Procedimiento", xName + 2, y + 4)
+    .text("Diente", xTooth, y + 4, { width: colW.tooth })
+    .text("Cant.", xQty, y + 4, { width: colW.qty, align: "right" })
+    .text("P. unitario", xUnit, y + 4, { width: colW.unit, align: "right" })
+    .text("Subtotal", xSub, y + 4, { width: colW.sub, align: "right" });
 
   y += headH;
 
-  // Filas (cebra)
-  doc.font("Helvetica").fontSize(11).fillColor("black");
-  const rowPadY = 6;
+  // Filas (cebra) con altura mínima compacta
+  doc.font("Helvetica").fontSize(FONT.base).fillColor("black");
+  const rowPadY = 4;
 
   for (let i = 0; i < inv.items.length; i++) {
     const it = inv.items[i];
     const name = it.procedure?.name || "—";
-    const hName = Math.max(16, doc.heightOfString(name, { width: wName }));
-
+    const hName = Math.max(14, doc.heightOfString(name, { width: wName, lineGap: 2 }));
     const rowH = hName + rowPadY * 2;
 
-    // zebra
     if (i % 2 === 0) {
-      doc.save()
-        .rect(left, y, width, rowH)
-        .fill(BRAND_LIGHT);
-      doc.restore();
+      doc.save().rect(left, y, width, rowH).fill(BRAND_LIGHT).restore();
     }
 
     const rowY = y + rowPadY;
-
-    doc.fillColor("black");
     doc.text(it.procedureCode, xCode + 4, rowY, { width: colW.code });
-    doc.text(name, xName + 2, rowY, { width: wName });
+    doc.text(name, xName + 2, rowY, { width: wName, lineGap: 2 });
     doc.text(it.tooth || "—", xTooth, rowY, { width: colW.tooth });
     doc.text(String(it.quantity), xQty, rowY, { width: colW.qty, align: "right" });
     doc.text(`$ ${money(it.unitPrice)}`, xUnit, rowY, { width: colW.unit, align: "right" });
@@ -160,31 +150,28 @@ export async function GET(req, { params }) {
 
     y += rowH;
 
-    // salto simple si faltara espacio (caso raro)
+    // Salto de página si hiciera falta
     if (y > doc.page.height - 120) {
       doc.addPage();
       y = topY;
     }
   }
 
-  // Línea + Total destacado
-  y += 8;
-  doc.moveTo(left, y).lineTo(right, y).lineWidth(0.5).strokeColor("#d1d5db").stroke();
-  y += 12;
+  // ======= TOTAL COMPACTO =======
+  y += 6;
+  doc.moveTo(left, y).lineTo(right, y).lineWidth(0.5).strokeColor("#e5e7eb").stroke();
+  y += 10;
 
-  const totalBoxW = 200;
-  const totalBoxH = 32;
+  const totalBoxW = 220;
+  const totalBoxH = 28;
   const totalBoxX = right - totalBoxW;
 
-  doc.save()
-    .roundedRect(totalBoxX, y, totalBoxW, totalBoxH, 8)
-    .fill(BRAND);
-  doc.restore();
+  doc.save().roundedRect(totalBoxX, y, totalBoxW, totalBoxH, 10).fill(BRAND).restore();
 
-  doc.fillColor("white").font("Helvetica-Bold").fontSize(12)
-    .text("Total", totalBoxX + 12, y + 9);
-  doc.text(`$ ${money(inv.total)}`, totalBoxX, y + 9, {
-    width: totalBoxW - 12,
+  doc.fillColor("white").font("Helvetica-Bold").fontSize(FONT.base + 1)
+    .text("Total", totalBoxX + 14, y + 7);
+  doc.text(`$ ${money(inv.total)}`, totalBoxX + 14, y + 7, {
+    width: totalBoxW - 28,
     align: "right",
   });
 
