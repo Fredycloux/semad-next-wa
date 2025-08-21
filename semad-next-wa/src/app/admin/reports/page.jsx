@@ -168,7 +168,7 @@ function OdontogramReport(){
           </div>
           <div className="flex items-center gap-2">
             <a className="px-3 py-1 rounded bg-violet-600 text-white"
-               href={`/api/admin/patients/${patient.id}/odontogram/pdf`} target="_blank" rel="noopener">
+               href={`/api/admin/patients/${patient.id}/history/pdf`} target="_blank" rel="noopener">
               Descargar PDF
             </a>
             <button className="text-violet-700 hover:underline" onClick={()=>setPatient(null)}>Cambiar</button>
