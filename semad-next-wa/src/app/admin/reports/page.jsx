@@ -72,7 +72,7 @@ function InventoryReport(){
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi title="SKUs" value={k.skuCount} />
+        <Kpi title="Códigos" value={k.skuCount} />
         <Kpi title="Unidades" value={k.totalUnits} />
         <Kpi title="Valor inventario" value={`$ ${money(k.totalValue)}`} />
         <Kpi title="Bajo stock" value={k.lowStockCount} />
@@ -82,7 +82,7 @@ function InventoryReport(){
         <table className="min-w-full text-sm">
           <thead className="bg-violet-600 text-white">
             <tr>
-              <th className="p-2 text-left">SKU</th>
+              <th className="p-2 text-left">Código</th>
               <th className="p-2 text-left">Nombre</th>
               <th className="p-2 text-right">Stock</th>
               <th className="p-2 text-right">Mínimo</th>
