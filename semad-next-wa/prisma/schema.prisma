@@ -89,7 +89,7 @@ model Appointment {
 
 model InventoryItem {
   id        String   @id @default(cuid())
-  sku       String?  @unique
+  sku       String?  
   name      String
   category  String?
   unit      String?          // uds, ml, cajas, etc.
