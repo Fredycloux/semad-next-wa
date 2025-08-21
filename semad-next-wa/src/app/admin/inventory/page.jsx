@@ -80,7 +80,7 @@ export default function InventoryPage(){
           <input
             value={q}
             onChange={e=>setQ(e.target.value)}
-            placeholder="Buscar por nombre, SKU o categoría…"
+            placeholder="Buscar por nombre, Código o categoría…"
             className="w-full border rounded-lg px-3 py-2"
           />
           <label className="inline-flex items-center gap-2 text-sm px-3">
@@ -96,7 +96,7 @@ export default function InventoryPage(){
         <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-2">
           <input className="border rounded px-3 py-2 lg:col-span-2" placeholder="Nombre"
             value={form.name} onChange={e=>setForm({...form, name:e.target.value})}/>
-          <input className="border rounded px-3 py-2" placeholder="SKU"
+          <input className="border rounded px-3 py-2" placeholder="Código"
             value={form.sku} onChange={e=>setForm({...form, sku:e.target.value})}/>
           <input className="border rounded px-3 py-2" placeholder="Categoría"
             value={form.category} onChange={e=>setForm({...form, category:e.target.value})}/>
