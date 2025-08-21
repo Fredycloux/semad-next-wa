@@ -119,7 +119,7 @@ export default function InventoryPage(){
           <thead className="bg-violet-600 text-white">
             <tr>
               <th className="p-2 text-left">Nombre</th>
-              <th className="p-2">SKU</th>
+              <th className="p-2">Código</th>
               <th className="p-2">Categoría</th>
               <th className="p-2">Unidad</th>
               <th className="p-2">Mínimo</th>
