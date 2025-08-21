@@ -31,21 +31,28 @@ export default async function InvoiceDetailPage({ params }) {
           </div>
         </div>
 
-        <div className="text-right space-y-2">
+        {/* Acciones y QR */}
+        <div className="flex flex-col items-center gap-3 text-right">
           <a
             href={`/api/admin/invoices/${inv.id}/pdf`}
             target="_blank"
-            className="inline-block rounded-lg bg-violet-600 text-white px-3 py-2"
+            rel="noopener"
+            className="inline-block rounded-lg bg-violet-600 text-white px-4 py-2 hover:opacity-90"
           >
             Ver / Descargar PDF
           </a>
-          <div>
-            <img
-              src={`/api/admin/invoices/${inv.id}/qr`}
-              alt="QR de la factura"
-              className="w-32 h-32 border rounded"
-            />
-          </div>
+
+          <img
+            src={`/api/admin/invoices/${inv.id}/qr`}
+            alt="QR de la factura"
+            className="w-32 h-32 border rounded"
+          />
+          {/* Si algún navegador te cachea el QR, usa esta variante: */}
+          {/* <img
+            src={`/api/admin/invoices/${inv.id}/qr?v=${new Date(inv.updatedAt || inv.date).getTime()}`}
+            alt="QR de la factura"
+            className="w-32 h-32 border rounded"
+          /> */}
         </div>
       </div>
 
