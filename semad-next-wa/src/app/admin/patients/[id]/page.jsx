@@ -28,25 +28,27 @@ export default async function PatientPage({ params }) {
   if (!patient) return <div className="p-4">Paciente no encontrado.</div>;
 
   return (
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">Historia clínica</h1>
-            <p className="text-sm text-gray-500">
-              {patient.fullName} · {patient.document || "—"} · {patient.phone || "—"}
-            </p>
-          </div>
-        
-          <div className="mt-1">
-            <a
-              href={`/api/admin/patients/${patient.id}/history/pdf`}
-              target="_blank"
-              rel="noopener"
-              className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-white hover:bg-violet-700"
-            >
-              Descargar Historia / Odontograma (PDF)
-            </a>
-          </div>
+    <div className="space-y-6 p-4">
+
+      {/* Header + botón PDF */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Historia clínica</h1>
+          <p className="text-sm text-gray-500">
+            {patient.fullName} · {patient.document || "—"} · {patient.phone || "—"}
+          </p>
         </div>
+        <div className="mt-1">
+          <a
+            href={`/api/admin/patients/${patient.id}/history/pdf`}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-white hover:bg-violet-700"
+          >
+            Descargar Historia / Odontograma (PDF)
+          </a>
+        </div>
+      </div>
 
       <EditPatientForm patient={patient} />
 
