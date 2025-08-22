@@ -161,27 +161,49 @@ export async function historyPdfResponse(req, patientId) {
   doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14).text("Odontograma", left, y);
   y += 16;
 
-  const rows = [
-    ["18","17","16","15","14","13","12","11","21","22","23","24","25","26","27","28"],
-    ["48","47","46","45","44","43","42","41","31","32","33","34","35","36","37","38"],
-  ];
-  const stepX = 28;                 // separación horizontal (más compacto)
+    // Adulto vs Niño (FDI)
+  const dent = String(patient.dentition || "ADULT").toUpperCase();
+  const rows =
+    dent === "CHILD"
+      ? [
+          // TOP infantil
+          ["55","54","53","52","51","61","62","63","64","65"],
+          // BOTTOM infantil
+          ["85","84","83","82","81","71","72","73","74","75"],
+        ]
+      : [
+          // TOP adulto
+          ["18","17","16","15","14","13","12","11","21","22","23","24","25","26","27","28"],
+          // BOTTOM adulto
+          ["48","47","46","45","44","43","42","41","31","32","33","34","35","36","37","38"],
+        ];
+
+ // Tamaños y espaciados (un poco más compacto para centrar mejor)
+  const stepX = 28;                 // separación horizontal
   const stepY = 40;                 // separación vertical
   const boxSize = { W: 22, H: 18 }; // tamaño de cada “diente”
-  const rowWidth = 16 * boxSize.W + 15 * (stepX - boxSize.W);
-  const startX = left + Math.max(0, (width - rowWidth) / 2);
+  const midGap = 8;                 // gap al pasar la línea media
 
+  // Ancho de fila (considera el gap central)
+  const rowPixelWidth = (nums) =>
+    nums.length * boxSize.W + (nums.length - 1) * (stepX - boxSize.W) + midGap;
+
+  const widest = Math.max(...rows.map(rowPixelWidth));
+  const startX = left + Math.max(0, (width - widest) / 2);
+
+  // Dibujo centrado con gap en la mitad (entre 51|61 o 11|21)
   rows.forEach((nums, r) => {
     const rowY = y + r * stepY;
     let x = startX;
+    const midIndex = Math.floor((nums.length - 1) / 2); // 7 en adulto, 4 en niño
     nums.forEach((n, i) => {
       drawToothBox(doc, x, rowY, n, fillMap[n] || {}, boxSize);
       x += stepX;
-      if (i === 7) x += 8; // pequeño gap central
+      if (i === midIndex) x += midGap; // pequeño espacio en la línea media
     });
   });
 
-  y += rows.length * stepY + 14; // margen inferior
+  y += rows.length * stepY + 14; // margen inferior del bloque
   doc.moveTo(left, y).lineTo(right, y).strokeColor(SLATE_200).lineWidth(1).stroke();
   y += 12;
 
