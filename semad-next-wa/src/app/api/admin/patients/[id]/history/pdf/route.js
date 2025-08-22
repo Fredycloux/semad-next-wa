@@ -170,9 +170,9 @@ export async function GET(req, { params }) {
     // Odontograma
     let y = cardY + cardH + 22;
     doc.moveTo(left, y).lineTo(right, y).strokeColor(SLATE_200).lineWidth(1).stroke();
-    y += 8;
-    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14).text("Odontograma", left, y);
     y += 10;
+    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14).text("Odontograma", left, y);
+    y += 8;
 
     // FDI adulto (orden visual UI)
     const rows = [
