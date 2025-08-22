@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 const money = (n)=> new Intl.NumberFormat("es-CO").format(Number(n||0));
 
 export default function ReportsPage(){
-  const [tab, setTab] = useState("inventario");
+  //const [tab, setTab] = useState("inventario");
+  const [tab, setTab] = useState("Historias / Odontograma");
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-4">
@@ -21,7 +22,8 @@ export default function ReportsPage(){
         </button>
       </div>
 
-      {tab==="inventario" ? <InventoryReport /> : <OdontogramReport />}
+     //{tab==="inventario" ? <InventoryReport /> : <OdontogramReport />}
+      {tab==="odontograma" ? <OdontogramReport /> : <InventoryReport />}
     </div>
   );
 }
