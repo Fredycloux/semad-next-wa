@@ -210,8 +210,8 @@ export async function GET(req, { params }) {
       patient.medicalHistory ??
       patient.medicalBackground ??
       patient.background ??
-      patient.antecedents ??
       patient.antecedentes ??
+      patient.history ??
       null;
 
     const colW = Math.floor(width / 2) - 8;
@@ -223,7 +223,7 @@ export async function GET(req, { params }) {
 
     drawLine("EPS", epsVal, left, y);
     drawLine("Alergias", patient.allergies, left, y + 18);
-    drawLine("Antecedentes", patient.antecedentes, left, y + 36);
+    drawLine("Antecedentes", antecedentes, left, y+54);
 
     const lastC = patient.consultations?.[0] || null;
     doc.font("Helvetica-Bold").fillColor("#6b7280").fontSize(11).text("Última consulta:", col2X, y);
