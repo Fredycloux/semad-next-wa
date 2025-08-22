@@ -224,7 +224,7 @@ export async function GET(req, { params }) {
   // izquierda
   lbl("EPS",         L, y);      val(patient.insurer,        L+90, y,     colW-100);
   lbl("Alergias",    L, y+18);   val(patient.allergies,      L+90, y+18,  colW-100);
-  lbl("Antecedentes",L, y+36);   val(patient.medicalHistory, L+90, y+36,  colW-100);
+  lbl("Antecedentes",L, y+36);   val(patient.antecedentes, L+90, y+36,  colW-100);
 
   // derecha (sin repetir el email aquí)
   const last = patient.consultations?.[0];
