@@ -89,7 +89,7 @@ export async function GET(req, { params }) {
         odontogram: true,
         consultations: { orderBy: { date: "desc" }, take: 1 },
         appointments: { orderBy: { date: "desc" }, take: 5 },
-      },
+      }
     });
     if (!patient) return new Response("Paciente no encontrado", { status: 404 });
 
@@ -134,41 +134,16 @@ export async function GET(req, { params }) {
       const res = await fetch(new URL("/logo_semad.png", origin));
       if (res.ok) {
         const buf = Buffer.from(await res.arrayBuffer());
-        doc.image(buf, left, 18, { width: 120 });
+        doc.image(buf, left, 28, { width: 120 }); // Bajado 10px
       }
     } catch {}
 
     // Título
     doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(22)
-       .text("Reporte de Historia Clínica / Odontograma", left + 140, 24, { width: width - 140 });
-
-    // Tarjeta paciente (izquierda)
-    const cardY = 68, cardH = 78, gap = 16;
-    const cardW = Math.round((width - gap) * 0.58);
-    const card2W = (width - gap) - cardW;
-
-    doc.roundedRect(left, cardY, cardW, cardH, 12).strokeColor(VIOLET).lineWidth(1).stroke();
-    const L1 = left + 12;
-    doc.fontSize(11).fillColor("#000");
-    const label = (lab, y) => doc.font("Helvetica-Bold").text(`${lab}:`, L1, y);
-    const value = (val, y) => doc.font("Helvetica").text(val || "—", L1 + 100, y, { width: cardW - 112 });
-
-    label("Paciente", cardY + 10);     value(patient.fullName, cardY + 10);
-    label("Documento", cardY + 28);    value(patient.document, cardY + 28);
-    label("Teléfono", cardY + 46);     value(patient.phone, cardY + 46);
-    label("Email",    cardY + 64);     value(patient.email, cardY + 64);
-
-    // Tarjeta fecha + edad (derecha)
-    const rX = left + cardW + gap;
-    doc.roundedRect(rX, cardY, card2W, cardH, 12).fillAndStroke(LIGHT_BG, VIOLET);
-    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(12).text("Fecha de reporte", rX + 12, cardY + 12);
-    doc.fillColor("#000").font("Helvetica").fontSize(12).text(fmtDate(new Date()), rX + 12, cardY + 30);
-    doc.font("Helvetica-Bold").text("Edad:", rX + 12, cardY + 52);
-    const dob = patient.birthDate || patient.birthdate || patient.dob || patient.dateOfBirth;
-    doc.font("Helvetica").text(ageFrom(dob), rX + 60, cardY + 52);
+       .text("Reporte de Historia Clínica / Odontograma", left + 140, 34); // Bajado 10px
 
     // Odontograma
-    let y = cardY + cardH + 22;
+    let y = 108; // Bajado 40px
     doc.moveTo(left, y).lineTo(right, y).strokeColor(SLATE_200).lineWidth(1).stroke();
     y += 10;
     doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14).text("Odontograma", left, y);
