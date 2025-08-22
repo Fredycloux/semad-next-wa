@@ -11,13 +11,13 @@ export default function ReportsPage(){
       <h1 className="text-lg font-semibold">Reportes</h1>
 
       <div className="flex gap-2">
-        <button onClick={()=>setTab("inventario")}
-          className={`px-3 py-1 rounded ${tab==="inventario"?"bg-violet-600 text-white":"border"}`}>
-          Inventario
-        </button>
         <button onClick={()=>setTab("odontograma")}
           className={`px-3 py-1 rounded ${tab==="odontograma"?"bg-violet-600 text-white":"border"}`}>
           Historias / Odontograma
+        </button>
+        <button onClick={()=>setTab("inventario")}
+          className={`px-3 py-1 rounded ${tab==="inventario"?"bg-violet-600 text-white":"border"}`}>
+          Inventario
         </button>
       </div>
 
