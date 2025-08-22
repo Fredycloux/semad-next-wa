@@ -174,7 +174,6 @@ export async function GET(req, { params }){
   L("Alergias:", patient.allergies, left, y+36);
   L("Antecedentes:", antecedentes, left, y+54);
   const lastC = patient.consultations?.[0];
-  L("Email:", patient.email || "—", left+colW, y+18);
   L("Última consulta:", lastC?.date ? new Date(lastC.date).toLocaleString("es-CO") : "—", left+colW, y+36);
   y += 72;
 
