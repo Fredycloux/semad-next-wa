@@ -36,7 +36,7 @@ const normSurf = (s = "") => {
 };
 
 // diente estilo UI (B/L/M/D/O) + número FDI debajo
-function drawToothBox(doc, x, y, tooth, fills = {}, { W = 26, H = 22 } = {}) {
+function drawToothBox(doc, x, y, tooth, fills = {}, { W = 22, H = 18 } = {}) { // ⬅️ más pequeño
   const R = 6;
   doc.save().roundedRect(x, y, W, H, R).lineWidth(1).strokeColor(SLATE_200).stroke();
 
@@ -50,8 +50,7 @@ function drawToothBox(doc, x, y, tooth, fills = {}, { W = 26, H = 22 } = {}) {
 
   // helper
   const paint = (fx, fy, fw, fh, key) => {
-    // **IMPORTANTE**: usamos SOLO el color guardado para que coincida con la UI
-    const color = fills[key] || null;
+    const color = fills[key] || null; // color guardado en BD/UI
     const stroke = color || SLATE_300;
     doc.save();
     doc.strokeColor(stroke).fillColor(color || "#fff").fillOpacity(color ? 0.18 : 1.0);
@@ -140,13 +139,17 @@ export async function GET(req, { params }) {
 
     // Título
     doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(22)
-       .text("Reporte de Historia Clínica / Odontograma", left + 140, 24, { width: width - 140 });
+       .text("Reporte de Historia Clínica / Odontograma", left + 140, 26, { width: width - 160 });
 
-    // Tarjeta paciente (izquierda)
-    const cardY = 68, cardH = 78, gap = 16;
-    const cardW = Math.round((width - gap) * 0.58);
+    // ⬇️ Calculamos el inicio de las tarjetas un poco más abajo para no chocar con logo/título
+    const titleBottom = doc.y;               // fin real del título
+    let cardY = Math.max(108, titleBottom + 20); // antes: 68. Ahora más abajo.
+    const cardH = 82;                          // altura
+    const gap   = 16;
+    const cardW  = Math.round((width - gap) * 0.58);
     const card2W = (width - gap) - cardW;
 
+    // Tarjeta paciente (izquierda)
     doc.roundedRect(left, cardY, cardW, cardH, 12).strokeColor(VIOLET).lineWidth(1).stroke();
     const L1 = left + 12;
     doc.fontSize(11).fillColor("#000");
@@ -167,21 +170,23 @@ export async function GET(req, { params }) {
     const dob = patient.birthDate || patient.birthdate || patient.dob || patient.dateOfBirth;
     doc.font("Helvetica").text(ageFrom(dob), rX + 60, cardY + 52);
 
-    // Odontograma
-    let y = cardY + cardH + 22;
+    // ---- Odontograma ----
+    let y = cardY + cardH + 32; // ⬅️ más espacio bajo las tarjetas (antes 22)
     doc.moveTo(left, y).lineTo(right, y).strokeColor(SLATE_200).lineWidth(1).stroke();
-    y += 8;
+    y += 14; // ⬅️ más espacio con el título "Odontograma"
     doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14).text("Odontograma", left, y);
-    y += 10;
+    y += 16; // ⬅️ margen extra entre el texto y la grilla
 
     // FDI adulto (orden visual UI)
     const rows = [
       ["18","17","16","15","14","13","12","11","21","22","23","24","25","26","27","28"],
       ["48","47","46","45","44","43","42","41","31","32","33","34","35","36","37","38"],
     ];
-    const stepX = 34;              // separación horizontal
-    const stepY = 52;              // separación vertical
-    const boxSize = { W: 26, H: 22 };
+
+    // ⬇️ odontograma más pequeño y concentrado
+    const stepX = 28;            // separación horizontal (antes 34)
+    const stepY = 40;            // separación vertical (antes 52)
+    const boxSize = { W: 22, H: 18 }; // tamaño de cada diente (antes 26x22)
 
     // centrar 16 columnas
     const rowWidth = 16 * boxSize.W + 15 * (stepX - boxSize.W);
@@ -197,9 +202,9 @@ export async function GET(req, { params }) {
       });
     });
 
-    y += rows.length * stepY + 8;
+    y += rows.length * stepY + 10;
     doc.moveTo(left, y).lineTo(right, y).strokeColor(SLATE_200).lineWidth(1).stroke();
-    y += 10;
+    y += 12;
 
     // Datos clínicos
     doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(13).text("Datos clínicos", left, y);
@@ -210,8 +215,8 @@ export async function GET(req, { params }) {
       patient.medicalHistory ??
       patient.medicalBackground ??
       patient.background ??
-      patient.antecedents ??
       patient.antecedentes ??
+      patient.history ??
       null;
 
     const colW = Math.floor(width / 2) - 8;
