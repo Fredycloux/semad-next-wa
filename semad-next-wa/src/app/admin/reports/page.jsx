@@ -22,7 +22,6 @@ export default function ReportsPage(){
         </button>
       </div>
 
-    /*----- {tab==="inventario" ? <InventoryReport /> : <OdontogramReport />} -----*/
       {tab==="odontograma" ? <OdontogramReport /> : <InventoryReport />}
     </div>
   );
