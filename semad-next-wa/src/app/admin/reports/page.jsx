@@ -5,7 +5,7 @@ const money = (n)=> new Intl.NumberFormat("es-CO").format(Number(n||0));
 
 export default function ReportsPage(){
   //const [tab, setTab] = useState("inventario");
-  const [tab, setTab] = useState("Historias / Odontograma");
+  const [tab, setTab] = useState("odontograma");
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-4">
