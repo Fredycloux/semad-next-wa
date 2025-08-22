@@ -36,11 +36,11 @@ const normSurf = (s = "") => {
 };
 
 // diente estilo UI (B/L/M/D/O) + número FDI debajo
-function drawToothBox(doc, x, y, tooth, fills = {}, { W = 26, H = 22 } = {}) {
-  const R = 6;
+function drawToothBox(doc, x, y, tooth, fills = {}, { W = 22, H = 18 } = {}) { // ajustado tamaño a 22x18
+  const R = 4;
   doc.save().roundedRect(x, y, W, H, R).lineWidth(1).strokeColor(SLATE_200).stroke();
 
-  const pad = 3;
+  const pad = 2;
   const cx = x + W / 2;
   const cy = y + H / 2;
   const w = W - pad * 2;
@@ -55,7 +55,7 @@ function drawToothBox(doc, x, y, tooth, fills = {}, { W = 26, H = 22 } = {}) {
     const stroke = color || SLATE_300;
     doc.save();
     doc.strokeColor(stroke).fillColor(color || "#fff").fillOpacity(color ? 0.18 : 1.0);
-    doc.roundedRect(fx, fy, fw, fh, key === "O" ? 4 : 2).fillAndStroke();
+    doc.roundedRect(fx, fy, fw, fh, key === "O" ? 3 : 2).fillAndStroke(); // ajustado radio a 3
     doc.restore();
   };
 
@@ -71,7 +71,7 @@ function drawToothBox(doc, x, y, tooth, fills = {}, { W = 26, H = 22 } = {}) {
   paint(cx - sw / 2, cy - sh / 2, sw, sh, "O");
 
   // número FDI debajo
-  doc.fillColor("#6b7280").font("Helvetica").fontSize(8)
+  doc.fillColor("#6b7280").font("Helvetica").fontSize(7) // ajustado tamaño a 7
      .text(String(tooth), x, y + H + 2, { width: W, align: "center" });
   doc.restore();
 }
@@ -97,176 +97,132 @@ export async function GET(req, { params }) {
     const invoices = await prisma.invoice.findMany({
       where: { patientId: id },
       include: { items: { include: { procedure: true } } },
-      orderBy: { date: "desc" },
-      take: 200,
     });
-    const procsByTooth = new Map(); // tooth -> Set(names)
-    for (const inv of invoices) {
-      for (const it of inv.items) {
-        if (!it.tooth) continue;
-        const t = String(it.tooth);
-        if (!procsByTooth.has(t)) procsByTooth.set(t, new Set());
-        procsByTooth.get(t).add(it.procedure?.name || it.name || it.procedureCode);
-      }
-    }
+    const procByTooth = invoices.reduce((acc, inv) => {
+      inv.items.forEach(({ tooth, procedure }) => {
+        if (!acc[tooth]) acc[tooth] = new Set();
+        acc[tooth].add(procedure.name);
+      });
+      return acc;
+    }, {});
 
-    // mapa de superficies: { [tooth]: {B|L|M|D|O: "#hex"} }
-    const fillMap = {};
-    for (const e of patient.odontogram || []) {
-      const t = String(e.tooth);
-      const s = normSurf(e.surface);
-      if (!fillMap[t]) fillMap[t] = {};
-      if (e.color) fillMap[t][s] = e.color; // usamos el color de la UI
-    }
-
-    // ---------- PDF ----------
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    // generar PDF
     const stream = new PassThrough();
+    const doc = new PDFDocument({ size: "LETTER", margin: 30 });
     doc.pipe(stream);
 
-    const left = doc.page.margins.left;
-    const right = doc.page.width - doc.page.margins.right;
-    const width = right - left;
+    // encabezado
+    const cardW = 180;
+    const card2W = 160;
+    const stepX = 30;
+    const stepY = 25;
 
-    // Logo (opcional)
-    try {
-      const origin = req.nextUrl.origin;
-      const res = await fetch(new URL("/logo_semad.png", origin));
-      if (res.ok) {
-        const buf = Buffer.from(await res.arrayBuffer());
-        doc.image(buf, left, 28, { width: 120 }); // ajustado a 28 px
-      }
-    } catch {}
+    doc.save().fillColor(VIOLET).font("Helvetica-Bold").fontSize(18)
+      .text("Historia Clínica", 0, 20, { align: "center", width: 612 });
 
-    // Título
-    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(22)
-       .text("Reporte de Historia Clínica / Odontograma", left + 140, 34, { width: width - 140 }); // ajustado a 34 px
+    // tarjeta del paciente
+    doc.save().translate(30, 50)
+      .rect(0, 0, cardW, 70).fillColor(LIGHT_BG).fill()
+      .fillColor("#000").font("Helvetica-Bold").fontSize(12)
+      .text(patient.fullName, 10, 10)
+      .font("Helvetica").fontSize(10)
+      .text(`Documento: ${patient.document}`, 10, 25)
+      .text(`Teléfono: ${patient.phone || "—"}`, 10, 40)
+      .text(`Email: ${patient.email || "—"}`, 10, 55)
+      .restore();
 
-    // Tarjeta paciente (izquierda)
-    const cardY = 78, cardH = 78, gap = 16;
-    const cardW = Math.round((width - gap) * 0.58);
-    const card2W = (width - gap) - cardW;
+    // datos clínicos
+    const colW = 150;
+    const col2X = colW + 30;
+    const row1Y = 140;
+    const row2Y = row1Y + 25;
 
-    doc.roundedRect(left, cardY, cardW, cardH, 12).strokeColor(VIOLET).lineWidth(1).stroke();
-    const L1 = left + 12;
-    doc.fontSize(11).fillColor("#000");
-    const label = (lab, y) => doc.font("Helvetica-Bold").text(`${lab}:`, L1, y);
-    const value = (val, y) => doc.font("Helvetica").text(val || "—", L1 + 100, y, { width: cardW - 112 });
+    doc.save().translate(30, row1Y)
+      .fillColor("#000").font("Helvetica-Bold").fontSize(12)
+      .text("Datos Clínicos", 0, 0)
+      .font("Helvetica").fontSize(10)
+      .text("Edad:", 0, 15)
+      .text("Fecha Registro:", 0, 30)
+      .text("Última Consulta:", col2X, 15)
+      .text("Próxima Cita:", col2X, 30)
+      .fillColor("#6b7280")
+      .text(ageFrom(patient.birthDate), colW, 15)
+      .text(fmtDate(patient.createdAt), colW, 30)
+      .text(fmtDate(patient.consultations[0]?.date), col2X, 15)
+      .text(fmtDate(patient.appointments[0]?.date), col2X, 30)
+      .restore();
 
-    label("Paciente", cardY + 10);     value(patient.fullName, cardY + 10);
-    label("Documento", cardY + 28);    value(patient.document, cardY + 28);
-    label("Teléfono", cardY + 46);     value(patient.phone, cardY + 46);
-    label("Email",    cardY + 64);     value(patient.email, cardY + 64);
+    // odontograma
+    const odontoY = row2Y + 30;
+    const odontoW = 400;
+    const odontoH = 300;
 
-    // Tarjeta fecha + edad (derecha)
-    const rX = left + cardW + gap;
-    doc.roundedRect(rX, cardY, card2W, cardH, 12).fillAndStroke(LIGHT_BG, VIOLET);
-    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(12).text("Fecha de reporte", rX + 12, cardY + 12);
-    doc.fillColor("#000").font("Helvetica").fontSize(12).text(fmtDate(new Date()), rX + 12, cardY + 30);
-    doc.font("Helvetica-Bold").text("Edad:", rX + 12, cardY + 52);
-    const dob = patient.birthDate || patient.birthdate || patient.dob || patient.dateOfBirth;
-    doc.font("Helvetica").text(ageFrom(dob), rX + 60, cardY + 52);
+    doc.save().translate(30, odontoY)
+      .rect(0, 0, odontoW, odontoH).fillColor(LIGHT_BG).fill()
+      .fillColor(VIOLET).font("Helvetica-Bold").fontSize(12)
+      .text("Odontograma", odontoW / 2, 10, { align: "center" });
 
-    // Odontograma
-    let y = cardY + cardH + 32; // ajustado a 32 px
-    doc.moveTo(left, y).lineTo(right, y).strokeColor(SLATE_200).lineWidth(1).stroke();
-    y += 10;
-    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14).text("Odontograma", left, y);
-    y += 8;
-
-    // FDI adulto (orden visual UI)
-    const rows = [
-      ["18","17","16","15","14","13","12","11","21","22","23","24","25","26","27","28"],
-      ["48","47","46","45","44","43","42","41","31","32","33","34","35","36","37","38"],
-    ];
-    const stepX = 34;              // separación horizontal
-    const stepY = 52;              // separación vertical
-    const boxSize = { W: 26, H: 22 };
-
-    // centrar 16 columnas
-    const rowWidth = 16 * boxSize.W + 15 * (stepX - boxSize.W);
-    const startX = left + Math.max(0, (width - rowWidth) / 2);
-
-    rows.forEach((nums, r) => {
-      const rowY = y + r * stepY;
-      let x = startX;
-      nums.forEach((n, i) => {
-        drawToothBox(doc, x, rowY, n, fillMap[n] || {}, boxSize);
-        x += stepX;
-        if (i === 7) x += 10; // pequeño gap central
-      });
-    });
-
-    y += rows.length * stepY + 18; // ajustado a 18 px
-    doc.moveTo(left, y).lineTo(right, y).strokeColor(SLATE_200).lineWidth(1).stroke();
-    y += 10;
-
-    // Datos clínicos
-    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(13).text("Datos clínicos", left, y);
-    y = doc.y + 4;
-
-    const epsVal = patient.insurer || patient.eps || patient.EPS || null;
-    const antecedentes =
-      patient.medicalHistory ??
-      patient.medicalBackground ??
-      patient.background ??
-      patient.antecedentes ??
-      patient.history ??
-      null;
-
-    const colW = Math.floor(width / 2) - 8;
-    const col2X = left + colW + 16;
-    const drawLine = (lab, val, x0, y0) => {
-      doc.font("Helvetica-Bold").fillColor("#6b7280").fontSize(11).text(`${lab}:`, x0, y0, { continued: true });
-      doc.font("Helvetica").fillColor("#000").text(` ${val || "—"}`);
-    };
-
-    drawLine("EPS", epsVal, left, y);
-    drawLine("Alergias", patient.allergies, left, y + 18);
-    drawLine("Antecedentes", antecedentes, left, y + 36);
-
-    const lastC = patient.consultations?.[0] || null;
-    doc.font("Helvetica-Bold").fillColor("#6b7280").fontSize(11).text("Última consulta:", col2X, y);
-    doc.font("Helvetica").fillColor("#000").text(lastC ? fmtDate(lastC.date) : "—", col2X + 110, y);
-    doc.y = y + 56;
-
-    // Procedimientos por diente (nombres)
-    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(13)
-       .text("Procedimientos por diente (según facturación)", left, doc.y);
-    doc.moveDown(0.4);
-    doc.font("Helvetica").fillColor("#000").fontSize(11);
-    const entries = [...procsByTooth.entries()].sort((a, b) => Number(a[0]) - Number(b[0]));
-    if (entries.length === 0) {
-      doc.text("—", left, doc.y);
-    } else {
-      for (const [t, set] of entries) {
-        doc.text(`${t}: ${[...set].join(", ")}`, left, doc.y, { width });
+    let x = 30, y = 40;
+    for (const tooth of patient.odontogram) {
+      drawToothBox(doc, x, y, tooth.number, tooth.fills);
+      x += stepX;
+      if (x + 22 > odontoW) {
+        x = 30;
+        y += stepY;
       }
     }
-    doc.moveDown(0.8);
+    doc.restore();
 
-    // Citas
-    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(13).text("Citas", left, doc.y);
-    doc.moveDown(0.3);
-    doc.font("Helvetica").fillColor("#000").fontSize(11);
-    if (!patient.appointments?.length) {
-      doc.text("—", left, doc.y);
-    } else {
-      for (const a of patient.appointments) {
-        const status = a.status ? ` · ${a.status}` : "";
-        doc.text(`${fmtDate(a.date)} — ${a.reason || "—"}${status}`, left, doc.y, { width });
-      }
+    // procedimientos por diente
+    const procY = odontoY + odontoH + 30;
+    const procW = 400;
+
+    doc.save().translate(30, procY)
+      .fillColor(VIOLET).font("Helvetica-Bold").fontSize(12)
+      .text("Procedimientos por Diente", procW / 2, 0, { align: "center" })
+      .fillColor("#000").font("Helvetica").fontSize(10)
+      .text("Diente", 0, 20, { width: 50, align: "left" })
+      .text("Procedimientos", 50, 20, { width: procW - 50, align: "left" })
+      .rect(0, 30, procW, 1).fillColor(SLATE_200).fill();
+
+    let cy = 40;
+    for (const tooth of patient.odontogram) {
+      const procs = procByTooth[tooth.number]?.size
+        ? Array.from(procByTooth[tooth.number]).join(", ")
+        : "—";
+      doc.text(String(tooth.number), 0, cy, { width: 50, align: "left" })
+         .text(procs, 50, cy, { width: procW - 50, align: "left" });
+      cy += 20;
     }
+    doc.restore();
+
+    // citas
+    const apptY = procY + 120;
+    const apptW = 400;
+
+    doc.save().translate(30, apptY)
+      .fillColor(VIOLET).font("Helvetica-Bold").fontSize(12)
+      .text("Próximas Citas", apptW / 2, 0, { align: "center" })
+      .fillColor("#000").font("Helvetica").fontSize(10)
+      .text("Fecha", 0, 20, { width: 100, align: "left" })
+      .text("Motivo", 100, 20, { width: apptW - 100, align: "left" })
+      .rect(0, 30, apptW, 1).fillColor(SLATE_200).fill();
+
+    let ay = 40;
+    for (const appt of patient.appointments) {
+      doc.text(fmtDate(appt.date), 0, ay, { width: 100, align: "left" })
+         .text(appt.reason, 100, ay, { width: apptW - 100, align: "left" });
+      ay += 20;
+    }
+    doc.restore();
 
     doc.end();
     return new Response(stream, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="historia-${patient.document || patient.id}.pdf"`,
-        "Cache-Control": "no-store",
-      },
+      status: 200,
+      headers: { "Content-Type": "application/pdf" },
     });
-  } catch (e) {
-    return new Response(`Error: ${e.message || e}`, { status: 500 });
+  } catch (err) {
+    console.error(err);
+    return new Response("Error generando PDF", { status: 500 });
   }
 }
