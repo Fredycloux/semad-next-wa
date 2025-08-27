@@ -28,6 +28,7 @@ export default function CreateAppointmentPage() {
     const payload = {
       patient:  fd.get("patient"),
       phone:    fd.get("phone"),
+      email:    fd.get("email"),      // <== nuevo campo
       document: fd.get("document"),
       date:     fd.get("date"),
       time:     fd.get("time"),
