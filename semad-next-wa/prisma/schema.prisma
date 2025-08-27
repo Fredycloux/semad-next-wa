@@ -87,6 +87,17 @@ model Appointment {
   consultations Consultation[]
 }
 
+model AppointmentRequest {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  fullName  String
+  document  String?
+  phone     String?
+  email     String?
+  reason    String?
+  status    String   @default("Pendiente")
+}
+
 model InventoryItem {
   id        String   @id @default(cuid())
   sku       String?  @unique
