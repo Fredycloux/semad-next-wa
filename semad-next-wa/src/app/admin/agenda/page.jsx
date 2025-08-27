@@ -8,10 +8,16 @@ export default async function AgendaPage() {
   const from = new Date();
   from.setDate(from.getDate() - 1);
 
+  // Obtener citas próximas
   const appts = await prisma.appointment.findMany({
     where: { date: { gte: from }, status: { not: "Cancelada" } },
     include: { patient: true },
     orderBy: { date: "asc" },
+  });
+
+  // Contar solicitudes de cita pendientes
+  const pendingCount = await prisma.appointmentRequest.count({
+    where: { status: "Pendiente" },
   });
 
   return (
@@ -21,6 +27,13 @@ export default async function AgendaPage() {
         <p className="text-sm text-gray-500">
           Lista de citas próximas (ordenadas por fecha/hora).
         </p>
+        {pendingCount > 0 && (
+          <p className="mt-1 text-sm text-red-600 font-semibold">
+            ¡Tienes {pendingCount} solicitud
+            {pendingCount === 1 ? "" : "es"} pendiente
+            {pendingCount === 1 ? "" : "s"} por agendar!
+          </p>
+        )}
       </div>
 
       <div className="grid gap-3">
@@ -40,11 +53,15 @@ export default async function AgendaPage() {
                     minute: "2-digit",
                   })}
                 </div>
-                <div className="text-xs text-gray-600">{a.dentist || "—"}</div>
+                <div className="text-xs text-gray-600">
+                  {a.dentist || "—"}
+                </div>
               </div>
 
               <div className="flex-1">
-                <div className="font-medium">{a.patient?.fullName || "—"}</div>
+                <div className="font-medium">
+                  {a.patient?.fullName || "—"}
+                </div>
                 <div className="text-sm text-gray-600">
                   {a.reason || "—"} · {a.patient?.phone || "sin teléfono"}
                 </div>
