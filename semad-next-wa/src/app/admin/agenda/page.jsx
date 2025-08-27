@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import CancelAppointmentButton from "@/components/CancelAppointmentButton";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;                 // no ISR
+export const fetchCache = "force-no-store";  // no cache del route fetch
 
 export default async function AgendaPage() {
   const from = new Date();
@@ -71,6 +73,7 @@ export default async function AgendaPage() {
                 <Link
                   className="text-sm text-violet-700 hover:underline"
                   href={`/admin/patients/${a.patientId}`}
+                  prefetch={false}        // evita snapshot viejo al navegar
                 >
                   Historia
                 </Link>
