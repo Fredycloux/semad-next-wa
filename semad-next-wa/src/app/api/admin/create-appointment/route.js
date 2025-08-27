@@ -29,7 +29,7 @@ export async function POST(req) {
 
     const patient  = String(body.patient || "").trim();
     const phone    = String(body.phone || "").trim();
-    const email    = String(body.email || "").trim();        // nuevo campo
+    const email    = String(body.email || "").trim();
     const document = String(body.document || "").trim();
     const dateStr  = String(body.date || "").trim();
     const timeStr  = to24h(String(body.time || "").trim());
@@ -63,7 +63,7 @@ export async function POST(req) {
           fullName: patient,
           phone: phone || null,
           document: document || null,
-          email: email || null,   // guarda email al crear paciente
+          email: email || null,
         },
         select: { id: true },
       });
@@ -75,7 +75,7 @@ export async function POST(req) {
           fullName: patient,
           phone: phone || null,
           document: document || null,
-          email: email || null,   // actualiza email si viene en el formulario
+          email: email || null,
         },
       });
     }
@@ -91,7 +91,7 @@ export async function POST(req) {
       select: { id: true },
     });
 
-    // === Enviar recordatorios ===
+    // === Enviar recordatorios al paciente ===
     // Construimos un objeto con la información de la cita
     const appointmentInfo = {
       patientName: patient,
@@ -101,9 +101,10 @@ export async function POST(req) {
       clinicName: process.env.CLINIC_NAME || "Consultorio Odontológico",
       address: process.env.CLINIC_ADDRESS || "",
       dateTime: when.toISOString(),
+      reason,  // añadimos el motivo para usarlo en el correo del doctor
     };
 
-    // Enviar WhatsApp si hay teléfono
+    // WhatsApp y correo al paciente
     if (phone) {
       try {
         const bodyMsg = buildWhatsAppMessage(appointmentInfo);
@@ -113,7 +114,6 @@ export async function POST(req) {
       }
     }
 
-    // Enviar correo si hay email
     if (email) {
       try {
         const subject = `Recordatorio de cita – ${appointmentInfo.clinicName}`;
@@ -124,27 +124,49 @@ export async function POST(req) {
       }
     }
 
-    // === Enviar copia al odontólogo ===
-    // Obtén tus datos de contacto desde las variables de entorno
+    // === Enviar aviso al odontólogo con mensaje personalizado ===
     const dentistPhone = process.env.DENTIST_PHONE;
     const dentistEmail = process.env.DENTIST_EMAIL;
 
-    // Si hay un número de odontólogo configurado, envía WhatsApp
+    // Formatear fecha y hora para el mensaje del doctor
+    const dateFormatted = new Date(appointmentInfo.dateTime).toLocaleDateString("es-CO", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const timeFormatted = new Date(appointmentInfo.dateTime).toLocaleTimeString("es-CO", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    // WhatsApp al doctor: nueva cita
     if (dentistPhone) {
       try {
-        const bodyDr = buildWhatsAppMessage(appointmentInfo);
-        await sendWhatsAppReminder(dentistPhone, bodyDr);
+        const doctorBody =
+          `Hola Dr.(a) ${appointmentInfo.doctorName || ""},\n` +
+          `Tienes una nueva cita programada con ${appointmentInfo.patientName} el día ${dateFormatted} a las ${timeFormatted}.\n` +
+          `Motivo: ${appointmentInfo.reason || "-"}.`;
+        await sendWhatsAppReminder(dentistPhone, doctorBody);
       } catch (err) {
         console.error("Error al enviar WhatsApp al doctor:", err);
       }
     }
 
-    // Si hay un correo de odontólogo configurado, envía correo
+    // Correo al doctor: nueva cita
     if (dentistEmail) {
       try {
-        const subjectDr = `Recordatorio de cita – ${appointmentInfo.clinicName}`;
-        const htmlDr    = buildEmailTemplate(appointmentInfo);
-        await sendEmailReminder(dentistEmail, subjectDr, htmlDr);
+        const doctorSubject = `Nueva cita programada con ${appointmentInfo.patientName}`;
+        const doctorHtml = `
+          <div style="font-family: sans-serif; line-height:1.5; color:#374151;">
+            <h2 style="color:#6d28d9;">Nueva cita programada</h2>
+            <p>Hola Dr.(a) ${appointmentInfo.doctorName || ""},</p>
+            <p>Se ha programado una cita con <strong>${appointmentInfo.patientName}</strong>.</p>
+            <p><strong>Fecha:</strong> ${dateFormatted}<br/>
+               <strong>Hora:</strong> ${timeFormatted}</p>
+            <p><strong>Motivo:</strong> ${appointmentInfo.reason || "-"}</p>
+          </div>
+        `;
+        await sendEmailReminder(dentistEmail, doctorSubject, doctorHtml);
       } catch (err) {
         console.error("Error al enviar correo electrónico al doctor:", err);
       }
