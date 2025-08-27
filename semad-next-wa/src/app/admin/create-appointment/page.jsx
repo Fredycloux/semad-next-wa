@@ -15,10 +15,10 @@ export default function CreateAppointmentPage() {
   const [patientName, setPatientName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [requestReason, setRequestReason] = useState(""); // para mostrar el motivo
+  const [requestReason, setRequestReason] = useState("");  // para mostrar el motivo
   const [requests, setRequests] = useState([]);
 
-  // ---- función reutilizable para cargar solicitudes pendientes ----
+  // --- función reutilizable para cargar solicitudes sin caché ---
   const loadRequests = async () => {
     try {
       const r = await fetch("/api/admin/appointment-requests", {
@@ -34,8 +34,8 @@ export default function CreateAppointmentPage() {
   useEffect(() => {
     // cargar listas de odontólogos y procedimientos (sin caché)
     fetch("/api/catalogs", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
+      .then(r => r.json())
+      .then(data => {
         setDentists(data.dentists || []);
         setProcedures(data.procedures || []);
       })
@@ -44,15 +44,13 @@ export default function CreateAppointmentPage() {
     // cargar solicitudes de cita pendientes
     loadRequests();
 
-    // al volver a enfocar la pestaña, recargar solicitudes
+    // recargar solicitudes cuando la pestaña recupere el foco
     const onFocus = () => loadRequests();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  /** Busca un paciente existente por documento o teléfono.
-   * Si encuentra coincidencia exacta, actualiza los estados del formulario.
-   */
+  /** Busca un paciente existente por documento o teléfono y rellena el form */
   async function fetchPatientData(value) {
     if (!value) return;
     try {
@@ -62,9 +60,8 @@ export default function CreateAppointmentPage() {
       );
       const data = await res.json();
       if (data.ok && Array.isArray(data.items) && data.items.length > 0) {
-        // Busca coincidencia exacta por documento o teléfono
         const match = data.items.find(
-          (item) => item.document === value || item.phone === value
+          item => item.document === value || item.phone === value
         );
         if (match) {
           if (match.document) setDocument(match.document);
@@ -78,15 +75,10 @@ export default function CreateAppointmentPage() {
     }
   }
 
-  // ejecuta la búsqueda cuando el usuario deja el campo documento o teléfono
   const handleDocumentBlur = () => fetchPatientData(document);
   const handlePhoneBlur = () => fetchPatientData(phone);
 
-  /**
-   * Maneja la selección de una solicitud de cita pendiente.
-   * Rellena los campos del formulario con los datos de la solicitud
-   * y elimina la solicitud de la lista (marcándola como atendida).
-   */
+  /** Selección de una solicitud pendiente */
   async function handleSelectRequest(reqItem) {
     setPatientName(reqItem.fullName || "");
     setDocument(reqItem.document || "");
@@ -94,13 +86,12 @@ export default function CreateAppointmentPage() {
     setEmail(reqItem.email || "");
     setRequestReason(reqItem.reason || "");
 
-    // Eliminar la solicitud en el servidor para que no reaparezca
     try {
       await fetch(`/api/admin/appointment-requests/${reqItem.id}`, {
         method: "DELETE",
       });
-      // Actualiza UI inmediata y vuelve a sincronizar por si hay cambios en paralelo
-      setRequests((prev) => prev.filter((i) => i.id !== reqItem.id));
+      // actualiza la lista local y vuelve a consultar por si hay cambios en paralelo
+      setRequests(prev => prev.filter(i => i.id !== reqItem.id));
       await loadRequests();
     } catch (err) {
       console.error("Error al eliminar solicitud:", err);
@@ -133,10 +124,13 @@ export default function CreateAppointmentPage() {
     setLoading(false);
 
     if (json.ok) {
-      // refresca solicitudes por si continuaras en esta vista
+      // sincroniza solicitudes por si permanecieras en la misma vista
       await loadRequests();
       alert("Cita creada");
-      router.push("/admin/agenda");
+      // volver a Agenda invalidando la caché del router
+      router.replace("/admin/agenda");
+      router.refresh();
+      // (alternativa: router.replace(`/admin/agenda?ts=${Date.now()}`))
     } else {
       alert(`Error al crear cita: ${json.error ?? "desconocido"}`);
     }
@@ -167,7 +161,7 @@ export default function CreateAppointmentPage() {
         <div className="bg-violet-50 border border-violet-100 rounded-lg p-3">
           <h2 className="text-md font-medium mb-2">Solicitudes pendientes</h2>
           <ul className="space-y-1 max-h-48 overflow-auto">
-            {requests.map((req) => (
+            {requests.map(req => (
               <li
                 key={req.id}
                 className="p-2 cursor-pointer hover:bg-violet-100 rounded"
@@ -191,7 +185,7 @@ export default function CreateAppointmentPage() {
           placeholder="Documento"
           className="w-full border rounded-lg px-3 py-2"
           value={document}
-          onChange={(e) => setDocument(e.target.value)}
+          onChange={e => setDocument(e.target.value)}
           onBlur={handleDocumentBlur}
           required
         />
@@ -201,7 +195,7 @@ export default function CreateAppointmentPage() {
           placeholder="Paciente (nombre completo)"
           className="w-full border rounded-lg px-3 py-2"
           value={patientName}
-          onChange={(e) => setPatientName(e.target.value)}
+          onChange={e => setPatientName(e.target.value)}
           required
         />
         {/* Teléfono */}
@@ -210,7 +204,7 @@ export default function CreateAppointmentPage() {
           placeholder="573001234567"
           className="w-full border rounded-lg px-3 py-2"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={e => setPhone(e.target.value)}
           onBlur={handlePhoneBlur}
           required
         />
@@ -221,7 +215,7 @@ export default function CreateAppointmentPage() {
           placeholder="Correo electrónico"
           className="w-full border rounded-lg px-3 py-2"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
         />
 
         {/* fecha y hora */}
@@ -247,7 +241,7 @@ export default function CreateAppointmentPage() {
           required
         >
           <option value="">Selecciona odontólogo...</option>
-          {dentists.map((d) => (
+          {dentists.map(d => (
             <option key={d.id ?? d.name} value={d.name}>
               {d.name}
             </option>
@@ -261,7 +255,7 @@ export default function CreateAppointmentPage() {
           required
         >
           <option value="">Selecciona procedimiento...</option>
-          {procedures.map((p) => (
+          {procedures.map(p => (
             <option key={p.id ?? p.code ?? p.name} value={p.name}>
               {p.name}
             </option>
