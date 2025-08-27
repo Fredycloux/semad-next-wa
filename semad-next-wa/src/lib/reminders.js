@@ -125,7 +125,7 @@ export function buildEmailTemplate(appointment) {
     <div style="font-family: sans-serif; line-height:1.5; color:#374151;">
       <h2 style="color:#6d28d9;">Recordatorio de cita</h2>
       <p>Hola ${patientName},</p>
-      <p>Este es un recordatorio de tu cita en <strong>${clinicName}</strong> con el doctor <strong>${doctorName}</strong>.</p>
+      <p>Este es un recordatorio de tu cita en <strong>${clinicName}</strong> con el Dr.(a). <strong>${doctorName}</strong>.</p>
       <p><strong>Fecha:</strong> ${date}<br/>
          <strong>Hora:</strong> ${time}</p>
       ${address ? `<p><strong>Dirección:</strong> ${address}</p>` : ""}
