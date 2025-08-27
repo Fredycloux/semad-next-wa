@@ -11,10 +11,11 @@ export default function CreateAppointmentPage() {
   const [loading, setLoading] = useState(false);
 
   // estados para los datos del paciente
+  const [document, setDocument] = useState("");
   const [patientName, setPatientName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [document, setDocument] = useState("");
+  
 
   useEffect(() => {
     // cargar listas de odontólogos y procedimientos
