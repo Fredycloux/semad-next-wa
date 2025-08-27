@@ -43,10 +43,10 @@ export default function CreateAppointmentPage() {
           item => item.document === value || item.phone === value
         );
         if (match) {
+          if (match.document) setDocument(match.document);
           if (match.fullName) setPatientName(match.fullName);
           if (match.phone) setPhone(match.phone);
           if (match.email) setEmail(match.email);
-          if (match.document) setDocument(match.document);
         }
       }
     } catch (err) {
