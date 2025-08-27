@@ -96,7 +96,7 @@ export default function RequestAppointmentPage() {
         <input
           type="tel"
           name="phone"
-          placeholder="Teléfono (E.164)"
+          placeholder="Celular +57"
           className="w-full border rounded-lg px-3 py-2"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
