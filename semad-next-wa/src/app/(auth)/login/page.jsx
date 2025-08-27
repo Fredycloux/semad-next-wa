@@ -1,9 +1,15 @@
+// Este archivo replica el formulario de inicio de sesión original y añade
+// un botón "Solicitar cita" que redirige a la página pública para
+// solicitar una cita. Coloque este archivo en
+// `src/app/(auth)/login/page.jsx` reemplazando el anterior.
+
 'use client'
 
 import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 // Evita el prerender estático y el error de useSearchParams
 export const dynamic = 'force-dynamic'
@@ -55,7 +61,6 @@ function LoginForm() {
               required
             />
           </div>
-
           <div>
             <label className="mb-1 block text-sm font-medium">Contraseña</label>
             <input
@@ -66,7 +71,6 @@ function LoginForm() {
               required
             />
           </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -79,6 +83,15 @@ function LoginForm() {
         <p className="mt-4 text-center text-xs text-gray-500">
           Sistemas de gestión SEMAD - Consultorio Odontológico.
         </p>
+        {/* Botón para solicitar cita */}
+        <div className="mt-4 text-center">
+          <Link
+            href="/request-appointment"
+            className="inline-block rounded-lg border border-violet-600 text-violet-600 px-4 py-2 text-sm hover:bg-violet-50"
+          >
+            Solicitar cita
+          </Link>
+        </div>
       </div>
     </div>
   )
