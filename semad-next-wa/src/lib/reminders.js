@@ -104,7 +104,7 @@ export function buildWhatsAppMessage(appointment) {
   const time = new Date(dateTime).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
   return (
     `Hola ${patientName},\n` +
-    `Te recordamos tu cita en ${clinicName} con el doctor ${doctorName} para el día ${date} a las ${time}.\n` +
+    `Te recordamos tu cita en ${clinicName} con el Dr.(a). ${doctorName} para el día ${date} a las ${time}.\n` +
     `Si necesitas reprogramar o cancelar, por favor comunícate con nosotros. ¡Te esperamos!`
   );
 }
