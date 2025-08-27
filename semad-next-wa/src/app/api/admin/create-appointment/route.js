@@ -109,7 +109,7 @@ export async function POST(req) {
         const bodyMsg = buildWhatsAppMessage(appointmentInfo);
         await sendWhatsAppReminder(phone, bodyMsg);
       } catch (err) {
-        console.error("Error al enviar WhatsApp:", err);
+        console.error("Error al enviar WhatsApp al paciente:", err);
       }
     }
 
@@ -120,7 +120,33 @@ export async function POST(req) {
         const html    = buildEmailTemplate(appointmentInfo);
         await sendEmailReminder(email, subject, html);
       } catch (err) {
-        console.error("Error al enviar correo electrónico:", err);
+        console.error("Error al enviar correo electrónico al paciente:", err);
+      }
+    }
+
+    // === Enviar copia al odontólogo ===
+    // Obtén tus datos de contacto desde las variables de entorno
+    const dentistPhone = process.env.DENTIST_PHONE;
+    const dentistEmail = process.env.DENTIST_EMAIL;
+
+    // Si hay un número de odontólogo configurado, envía WhatsApp
+    if (dentistPhone) {
+      try {
+        const bodyDr = buildWhatsAppMessage(appointmentInfo);
+        await sendWhatsAppReminder(dentistPhone, bodyDr);
+      } catch (err) {
+        console.error("Error al enviar WhatsApp al doctor:", err);
+      }
+    }
+
+    // Si hay un correo de odontólogo configurado, envía correo
+    if (dentistEmail) {
+      try {
+        const subjectDr = `Recordatorio de cita – ${appointmentInfo.clinicName}`;
+        const htmlDr    = buildEmailTemplate(appointmentInfo);
+        await sendEmailReminder(dentistEmail, subjectDr, htmlDr);
+      } catch (err) {
+        console.error("Error al enviar correo electrónico al doctor:", err);
       }
     }
 
