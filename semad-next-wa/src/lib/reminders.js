@@ -125,12 +125,53 @@ export function buildEmailTemplate(appointment) {
     <div style="font-family: sans-serif; line-height:1.5; color:#374151;">
       <h2 style="color:#6d28d9;">Recordatorio de cita</h2>
       <p>Hola ${patientName},</p>
-      <p>Este es un recordatorio de tu cita en <strong>${clinicName}</strong> con el <strong>Dr.(a) <strong>${doctorName}</strong>.</p>
+      <p>Este es un recordatorio de tu cita en <strong>${clinicName}</strong> con el <strong>Dr.(a) ${doctorName}</strong>.</p>
       <p><strong>Fecha:</strong> ${date}<br/>
          <strong>Hora:</strong> ${time}</p>
       ${address ? `<p><strong>Dirección:</strong> ${address}</p>` : ""}
       <p>Si necesitas reprogramar o cancelar, contesta este correo o llámanos al número de contacto.</p>
       <p>¡Te esperamos!</p>
+    </div>
+  `;
+}
+
+/**
+ * Build a WhatsApp message for a cancelled appointment.
+ *
+ * @param {object} appointment   The appointment object containing patient and schedule info
+ * @returns {string}
+ */
+export function buildCancellationWhatsAppMessage(appointment) {
+  const { patientName, dateTime, doctorName, clinicName } = appointment;
+  const date = new Date(dateTime).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
+  const time = new Date(dateTime).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  return (
+    `Hola ${patientName},\n` +
+    `Lamentamos informarte que tu cita en ${clinicName} con el Dr.(a) ${doctorName} ` +
+    `programada para el día ${date} a las ${time} ha sido cancelada.\n` +
+    `Si deseas reprogramar, por favor ponte en contacto con nosotros.`
+  );
+}
+
+/**
+ * Build an HTML email template for a cancelled appointment.
+ *
+ * @param {object} appointment   The appointment object containing patient and schedule info
+ * @returns {string}
+ */
+export function buildCancellationEmailTemplate(appointment) {
+  const { patientName, dateTime, doctorName, clinicName, address } = appointment;
+  const date = new Date(dateTime).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
+  const time = new Date(dateTime).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  return `
+    <div style="font-family: sans-serif; line-height:1.5; color:#374151;">
+      <h2 style="color:#dc2626;">Cancelación de cita</h2>
+      <p>Hola ${patientName},</p>
+      <p>Tu cita en <strong>${clinicName}</strong> con el <strong>Dr.(a) ${doctorName}</strong> ha sido cancelada.</p>
+      <p><strong>Fecha original:</strong> ${date}<br/>
+         <strong>Hora original:</strong> ${time}</p>
+      ${address ? `<p><strong>Dirección:</strong> ${address}</p>` : ""}
+      <p>Si necesitas reprogramar, por favor contáctanos.</p>
     </div>
   `;
 }
