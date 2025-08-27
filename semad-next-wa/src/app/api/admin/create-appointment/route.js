@@ -2,11 +2,19 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+// Importa las funciones de recordatorio
+import {
+  sendWhatsAppReminder,
+  sendEmailReminder,
+  buildWhatsAppMessage,
+  buildEmailTemplate,
+} from "../../../../lib/reminders";
+
 function to24h(t) {
   if (!t) return null;
-  const x = t.trim().toLowerCase().replace(/\s+/g, ""); // "08:42pm" / "08:42p.m."
+  const x = t.trim().toLowerCase().replace(/\s+/g, "");
   const m = x.match(/^(\d{1,2}):(\d{2})(am|a\.m\.|pm|p\.m\.)?$/i);
-  if (!m) return t; // ya puede venir "20:42"
+  if (!m) return t;
   let h = parseInt(m[1], 10);
   const min = m[2];
   const ampm = (m[3] || "").replace(/\./g, "");
@@ -19,13 +27,14 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    const patient  = String(body.patient || "").trim();      // Nombre completo
-    const phone    = String(body.phone || "").trim();        // Teléfono
-    const document = String(body.document || "").trim();     // Documento (puede ser vacío)
-    const dateStr  = String(body.date || "").trim();         // "YYYY-MM-DD"
-    const timeStr  = to24h(String(body.time || "").trim());  // "HH:mm" normalizado
-    const dentist  = String(body.dentist || "").trim();      // Nombre del odontólogo (string)
-    const reason   = String(body.reason || "").trim();       // Procedimiento (string)
+    const patient  = String(body.patient || "").trim();
+    const phone    = String(body.phone || "").trim();
+    const email    = String(body.email || "").trim();        // nuevo campo
+    const document = String(body.document || "").trim();
+    const dateStr  = String(body.date || "").trim();
+    const timeStr  = to24h(String(body.time || "").trim());
+    const dentist  = String(body.dentist || "").trim();
+    const reason   = String(body.reason || "").trim();
 
     if (!patient || !dateStr || !timeStr || !reason) {
       return Response.json(
@@ -34,11 +43,10 @@ export async function POST(req) {
       );
     }
 
-    // Combinar fecha y hora a Date (zona local del servidor)
+    // Combinar fecha y hora
     const when = new Date(`${dateStr}T${timeStr}:00`);
 
     // === Buscar o crear/actualizar paciente ===
-    // Como document NO es @unique en tu schema, usamos findFirst por document o phone.
     let dbPatient = await prisma.patient.findFirst({
       where: {
         OR: [
@@ -55,6 +63,7 @@ export async function POST(req) {
           fullName: patient,
           phone: phone || null,
           document: document || null,
+          email: email || null,   // guarda email al crear paciente
         },
         select: { id: true },
       });
@@ -66,6 +75,7 @@ export async function POST(req) {
           fullName: patient,
           phone: phone || null,
           document: document || null,
+          email: email || null,   // actualiza email si viene en el formulario
         },
       });
     }
@@ -74,12 +84,45 @@ export async function POST(req) {
     const appt = await prisma.appointment.create({
       data: {
         date: when,
-        reason,              // string
-        dentist: dentist || null, // string (opcional)
+        reason,
+        dentist: dentist || null,
         patient: { connect: { id: dbPatient.id } },
       },
       select: { id: true },
     });
+
+    // === Enviar recordatorios ===
+    // Construimos un objeto con la información de la cita
+    const appointmentInfo = {
+      patientName: patient,
+      patientPhone: phone,
+      patientEmail: email,
+      doctorName: dentist,
+      clinicName: process.env.CLINIC_NAME || "Consultorio Odontológico",
+      address: process.env.CLINIC_ADDRESS || "",
+      dateTime: when.toISOString(),
+    };
+
+    // Enviar WhatsApp si hay teléfono
+    if (phone) {
+      try {
+        const bodyMsg = buildWhatsAppMessage(appointmentInfo);
+        await sendWhatsAppReminder(phone, bodyMsg);
+      } catch (err) {
+        console.error("Error al enviar WhatsApp:", err);
+      }
+    }
+
+    // Enviar correo si hay email
+    if (email) {
+      try {
+        const subject = `Recordatorio de cita – ${appointmentInfo.clinicName}`;
+        const html    = buildEmailTemplate(appointmentInfo);
+        await sendEmailReminder(email, subject, html);
+      } catch (err) {
+        console.error("Error al enviar correo electrónico:", err);
+      }
+    }
 
     return Response.json({ ok: true, id: appt.id });
   } catch (e) {
