@@ -1,3 +1,4 @@
+// src/components/AdminNav.jsx
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,7 +21,8 @@ export default function AdminNav() {
   return (
     <header className="sticky top-0 z-10 bg-white/70 backdrop-blur border-b">
       <div className="max-w-5xl mx-auto flex items-center gap-4 p-3">
-        <Link href="/admin/agenda" className="flex items-center gap-2 shrink-0">
+        {/* Logo -> Agenda (sin prefetch) */}
+        <Link href="/admin/agenda" prefetch={false} className="flex items-center gap-2 shrink-0">
           <Image src="/logo_semad.png" alt="SEMAD" width={28} height={28} />
           <span className="font-semibold">SEMAD</span>
         </Link>
@@ -28,10 +30,13 @@ export default function AdminNav() {
         <nav className="flex items-center gap-2 text-sm">
           {items.map((it) => {
             const active = it.match.some((m) => pathname?.startsWith(m));
+            // Solo desactivamos prefetch en Agenda para evitar snapshot viejo
+            const disablePrefetch = it.href === "/admin/agenda";
             return (
               <Link
                 key={it.href}
                 href={it.href}
+                prefetch={disablePrefetch ? false : undefined}
                 aria-current={active ? "page" : undefined}
                 className={`px-2 py-1 rounded-md ${
                   active
@@ -46,8 +51,10 @@ export default function AdminNav() {
         </nav>
 
         <div className="ml-auto">
+          {/* Nueva cita (sin prefetch) */}
           <Link
             href="/admin/create-appointment"
+            prefetch={false}
             className="rounded-lg bg-violet-600 text-white text-sm px-3 py-1.5"
           >
             Nueva cita
