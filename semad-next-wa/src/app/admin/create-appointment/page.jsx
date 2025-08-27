@@ -66,6 +66,7 @@ export default function CreateAppointmentPage() {
       <form onSubmit={onSubmit} className="space-y-3">
         <input name="patient"   placeholder="Paciente (nombre completo)" className="w-full border rounded-lg px-3 py-2" required />
         <input name="phone"     placeholder="573001234567"               className="w-full border rounded-lg px-3 py-2" required />
+        <input name="email"     type="email"         placeholder="Correo electrónico"   className="w-full border rounded-lg px-3 py-2" />
         <input name="document"  placeholder="Documento"                   className="w-full border rounded-lg px-3 py-2" required />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input name="date" type="date" className="w-full border rounded-lg px-3 py-2" required />
