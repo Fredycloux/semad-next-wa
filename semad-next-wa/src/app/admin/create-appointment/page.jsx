@@ -64,10 +64,10 @@ export default function CreateAppointmentPage() {
 
     const fd = new FormData(e.currentTarget);
     const payload = {
+      document: fd.get("document"),
       patient: fd.get("patient"),
       phone: fd.get("phone"),
       email: fd.get("email"),
-      document: fd.get("document"),
       date: fd.get("date"),
       time: fd.get("time"),
       dentist: fd.get("dentist"),
@@ -113,6 +113,17 @@ export default function CreateAppointmentPage() {
 
       <form onSubmit={onSubmit} className="space-y-3">
         {/* campos controlados para paciente */}
+          {/* Poner DOCUMENTO primero */}
+        <input
+          name="document"
+          placeholder="Documento"
+          className="w-full border rounded-lg px-3 py-2"
+          value={document}
+          onChange={e => setDocument(e.target.value)}
+          onBlur={handleDocumentBlur}
+          required
+        />
+          {/* Nombre */}
         <input
           name="patient"
           placeholder="Paciente (nombre completo)"
@@ -121,6 +132,7 @@ export default function CreateAppointmentPage() {
           onChange={e => setPatientName(e.target.value)}
           required
         />
+          {/* Teléfono */}
         <input
           name="phone"
           placeholder="573001234567"
@@ -130,6 +142,7 @@ export default function CreateAppointmentPage() {
           onBlur={handlePhoneBlur}
           required
         />
+          {/* Correo */}
         <input
           name="email"
           type="email"
@@ -137,15 +150,6 @@ export default function CreateAppointmentPage() {
           className="w-full border rounded-lg px-3 py-2"
           value={email}
           onChange={e => setEmail(e.target.value)}
-        />
-        <input
-          name="document"
-          placeholder="Documento"
-          className="w-full border rounded-lg px-3 py-2"
-          value={document}
-          onChange={e => setDocument(e.target.value)}
-          onBlur={handleDocumentBlur}
-          required
         />
 
         {/* fecha y hora */}
