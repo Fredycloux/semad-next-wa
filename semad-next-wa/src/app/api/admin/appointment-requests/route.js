@@ -1,12 +1,17 @@
+// Impide caching/ISR y fuerza ejecución en cada request
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { prisma } from "@/lib/prisma";
 
 /**
- * Devuelve una lista de solicitudes de cita ordenadas por fecha de creación.
- * Cada elemento incluye id, fullName, document, phone, email, reason y status.
+ * Devuelve SOLO las solicitudes de cita PENDIENTES,
+ * ordenadas por fecha de creación (más recientes primero).
  */
 export async function GET() {
   try {
     const items = await prisma.appointmentRequest.findMany({
+      where: { status: "Pendiente" },      // <--- FILTRO CLAVE
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -23,8 +28,8 @@ export async function GET() {
   } catch (e) {
     console.error(e);
     return Response.json(
-      { ok: false, error: String(e.message || e) },
-      { status: 500 },
+      { ok: false, error: String(e?.message || e) },
+      { status: 500 }
     );
   }
 }
