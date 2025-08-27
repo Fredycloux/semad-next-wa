@@ -13,7 +13,7 @@ export async function GET(req) {
         { fullName: { contains: q, mode: "insensitive" } },
       ],
     },
-    select: { id: true, fullName: true, document: true, phone: true },
+    select: { id: true, fullName: true, document: true, phone: true, email: true },
     orderBy: { fullName: "asc" },
     take: 20,
   });
