@@ -10,12 +10,13 @@ export default function CreateAppointmentPage() {
   const [procedures, setProcedures] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // estados para los datos del paciente
+  // Estados para los datos del paciente
   const [document, setDocument] = useState("");
   const [patientName, setPatientName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  
+  const [requestReason, setRequestReason] = useState("");  // para mostrar el motivo
+  const [requests, setRequests] = useState([]);
 
   useEffect(() => {
     // cargar listas de odontólogos y procedimientos
@@ -24,6 +25,14 @@ export default function CreateAppointmentPage() {
       .then(data => {
         setDentists(data.dentists || []);
         setProcedures(data.procedures || []);
+      })
+      .catch(() => {});
+
+    // cargar solicitudes de cita pendientes
+    fetch("/api/admin/appointment-requests")
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) setRequests(data.items || []);
       })
       .catch(() => {});
   }, []);
@@ -58,6 +67,28 @@ export default function CreateAppointmentPage() {
   // ejecuta la búsqueda cuando el usuario deja el campo documento o teléfono
   const handleDocumentBlur = () => fetchPatientData(document);
   const handlePhoneBlur = () => fetchPatientData(phone);
+
+  /**
+   * Maneja la selección de una solicitud de cita pendiente.
+   * Rellena los campos del formulario con los datos de la solicitud
+   * y elimina la solicitud de la lista (marcándola como atendida).
+   */
+  async function handleSelectRequest(reqItem) {
+    setPatientName(reqItem.fullName || "");
+    setDocument(reqItem.document || "");
+    setPhone(reqItem.phone || "");
+    setEmail(reqItem.email || "");
+    setRequestReason(reqItem.reason || "");
+    // Eliminar la solicitud en el servidor para que no reaparezca
+    try {
+      await fetch(`/api/admin/appointment-requests/${reqItem.id}`, {
+        method: "DELETE",
+      });
+      setRequests(prev => prev.filter(i => i.id !== reqItem.id));
+    } catch (err) {
+      console.error("Error al eliminar solicitud:", err);
+    }
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -112,9 +143,30 @@ export default function CreateAppointmentPage() {
         </div>
       </div>
 
+      {/* Listado de solicitudes pendientes */}
+      {requests.length > 0 && (
+        <div className="bg-violet-50 border border-violet-100 rounded-lg p-3">
+          <h2 className="text-md font-medium mb-2">Solicitudes pendientes</h2>
+          <ul className="space-y-1 max-h-48 overflow-auto">
+            {requests.map(req => (
+              <li
+                key={req.id}
+                className="p-2 cursor-pointer hover:bg-violet-100 rounded"
+                onClick={() => handleSelectRequest(req)}
+              >
+                <span className="font-medium">{req.fullName}</span>{" "}
+                - {req.reason || "(sin motivo)"}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-gray-500">
+            Haz clic en una solicitud para cargar sus datos.
+          </p>
+        </div>
+      )}
+
       <form onSubmit={onSubmit} className="space-y-3">
-        {/* campos controlados para paciente */}
-          {/* Poner DOCUMENTO primero */}
+        {/* Documento */}
         <input
           name="document"
           placeholder="Documento"
@@ -124,7 +176,7 @@ export default function CreateAppointmentPage() {
           onBlur={handleDocumentBlur}
           required
         />
-          {/* Nombre */}
+        {/* Nombre */}
         <input
           name="patient"
           placeholder="Paciente (nombre completo)"
@@ -133,7 +185,7 @@ export default function CreateAppointmentPage() {
           onChange={e => setPatientName(e.target.value)}
           required
         />
-          {/* Teléfono */}
+        {/* Teléfono */}
         <input
           name="phone"
           placeholder="573001234567"
@@ -143,7 +195,7 @@ export default function CreateAppointmentPage() {
           onBlur={handlePhoneBlur}
           required
         />
-          {/* Correo */}
+        {/* Correo */}
         <input
           name="email"
           type="email"
@@ -197,6 +249,13 @@ export default function CreateAppointmentPage() {
           ))}
         </select>
 
+        {/* Motivo de la solicitud seleccionado, solo informativo */}
+        {requestReason && (
+          <p className="text-sm text-gray-500">
+            Motivo solicitado: {requestReason}
+          </p>
+        )}
+
         <button
           disabled={loading}
           className="rounded-lg bg-violet-600 text-white px-4 py-2"
@@ -205,8 +264,8 @@ export default function CreateAppointmentPage() {
         </button>
 
         <p className="text-xs text-gray-500">
-          Recordatorio de WhatsApp: si configuras el token y el cron, el paciente
-          recibirá un mensaje automático el día anterior.
+          Recordatorio de WhatsApp: si configuras el token y el cron, el
+          paciente recibirá un mensaje automático el día anterior.
         </p>
       </form>
     </div>
