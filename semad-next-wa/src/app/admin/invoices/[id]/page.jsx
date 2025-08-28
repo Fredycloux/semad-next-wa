@@ -1,3 +1,6 @@
+// src/app/admin/invoices/[id]/page.jsx
+
+
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
