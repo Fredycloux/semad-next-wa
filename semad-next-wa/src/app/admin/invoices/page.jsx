@@ -1,13 +1,15 @@
 // src/app/admin/invoices/page.jsx
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation"; // 👈
 import ConfirmDeleteButton from "@/components/ConfirmDeleteButton";
 
 function fmt(n) {
-  return new Intl.NumberFormat("es-CO").format(Number(n || 0));
+  return new Intl.NumberFormat("es-CO").format(Number(n||0));
 }
 
 export default function InvoicesPage() {
+  const router = useRouter(); 
   const [patientQ, setPatientQ] = useState("");
   const [patientOpts, setPatientOpts] = useState([]);
   const [patient, setPatient] = useState(null);
@@ -126,7 +128,8 @@ export default function InvoicesPage() {
       if (!j.ok) throw new Error(j.error || "No se pudo guardar");
 
       // Redirige al detalle de la factura
-      location.href = `/admin/invoices/${j.invoice.id}`;
+      //location.href = `/admin/invoices/${j.invoice.id}`;
+        router.push(`/admin/invoices/${j.invoice.id}`);
     } catch (e) {
       alert(e.message);
     } finally {
