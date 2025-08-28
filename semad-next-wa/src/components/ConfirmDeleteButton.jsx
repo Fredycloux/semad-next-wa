@@ -1,38 +1,52 @@
+// src/components/ConfirmDeleteButton.jsx
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function ConfirmDeleteButton({
-  onDelete,               // () => Promise<void>
+  url,                     // <- URL absoluta del endpoint DELETE (ej: `/api/admin/invoices/123`)
   label = "Eliminar",
-  confirmingLabel = "Eliminando...",
+  confirmingLabel = "Eliminando…",
   confirmText = "¿Seguro que deseas eliminar? Esta acción no se puede deshacer.",
-  className = "text-sm px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700",
+  afterDeleteHref = "",    // <- si la pasas, redirige allí; si no, hace router.refresh()
+  className = "text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700",
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const handleClick = async () => {
+  const handle = async () => {
     if (loading) return;
     if (!window.confirm(confirmText)) return;
 
+    setLoading(true);
     try {
-      setLoading(true);
-      await onDelete?.();
-      // Fuerza revalidar la página actual (agenda, historias o facturación)
-      router.refresh();
+      const r = await fetch(url, { method: "DELETE" });
+      let ok = r.ok;
+      try {
+        const j = await r.json();
+        if (j?.ok === false) ok = false;
+      } catch {
+        // si el endpoint no devuelve JSON, nos quedamos con r.ok
+      }
+
+      if (!ok) throw new Error("No se pudo eliminar. Revisa el endpoint DELETE.");
+
+      if (afterDeleteHref) {
+        // redirige (ej: a la lista de facturas)
+        router.replace(afterDeleteHref);
+      } else {
+        // permanece en la vista pero refresca datos
+        router.refresh();
+      }
+    } catch (e) {
+      alert(e.message || "Error al eliminar");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={loading}
-      className={className}
-    >
+    <button type="button" className={className} disabled={loading} onClick={handle}>
       {loading ? confirmingLabel : label}
     </button>
   );
