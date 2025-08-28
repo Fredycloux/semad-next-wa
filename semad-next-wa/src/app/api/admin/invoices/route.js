@@ -110,4 +110,15 @@ export async function POST(req) {
   } catch (e) {
     return Response.json({ ok: false, error: String(e?.message || e) }, { status: 500 });
   }
+
+  export async function DELETE(req) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = Number(searchParams.get("id"));
+    if (!id) return Response.json({ ok: false, error: "id requerido" }, { status: 400 });
+    await prisma.invoice.delete({ where: { id } });
+    return Response.json({ ok: true });
+  } catch (e) {
+    return Response.json({ ok: false, error: String(e?.message || e) }, { status: 500 });
+  }
 }
