@@ -102,17 +102,6 @@ export default function InvoicesPage() {
     [lines]
   );
 
-    async function remove(id) {
-    try {
-      const res = await fetch(`/api/admin/invoices?id=${id}`, { method: "DELETE" });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j.ok) throw new Error(j.error || res.statusText);
-      load();
-    } catch (err) {
-      alert("No se pudo eliminar: " + err.message);
-    }
-  }
-
   async function save() {
     if (!patient) { alert("Selecciona un paciente"); return; }
     if (lines.length === 0) { alert("Agrega al menos un ítem"); return; }
@@ -324,7 +313,6 @@ export default function InvoicesPage() {
       <section className="rounded-xl border p-4 space-y-2">
         <div className="flex items-center justify-between">
           <div className="font-medium">Facturas recientes</div>
-          <button onClick={() => remove(it.id)} className="text-sm text-red-600 hover:underline">Eliminar</button>
         </div>
 
         {recent.length === 0 ? (
