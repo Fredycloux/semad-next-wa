@@ -1,7 +1,7 @@
 // src/app/admin/invoices/page.jsx
-
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import DeleteInvoiceButton from "@/components/DeleteInvoiceButton";
 
 function fmt(n) {
   return new Intl.NumberFormat("es-CO").format(Number(n || 0));
@@ -203,9 +203,7 @@ export default function InvoicesPage() {
                 {p.code} ·{" "}
                 {p.variable
                   ? p.minPrice && p.maxPrice
-                    ? `Rango $ ${fmt(p.minPrice)} – $ ${fmt(p.maxPrice)}${
-                        p.unit ? ` (${p.unit})` : ""
-                      }`
+                    ? `Rango $ ${fmt(p.minPrice)} – $ ${fmt(p.maxPrice)}${p.unit ? ` (${p.unit})` : ""}`
                     : p.minPrice
                     ? `Desde $ ${fmt(p.minPrice)}${p.unit ? ` (${p.unit})` : ""}`
                     : "Variable"
@@ -312,50 +310,50 @@ export default function InvoicesPage() {
       </section>
 
       {/* Recientes */}
-<section className="rounded-xl border p-4 space-y-2">
-  <div className="flex items-center justify-between">
-    <div className="font-medium">Facturas recientes</div>
-    {/* Si luego haces un listado general, puedes enlazarlo aquí */}
-    {/* <a href="/admin/invoices/all" className="text-sm text-violet-700 hover:underline">Ver todas</a> */}
-  </div>
+      <section className="rounded-xl border p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="font-medium">Facturas recientes</div>
+        </div>
 
-  {recent.length === 0 ? (
-    <div className="text-sm text-gray-500">Aún no hay facturas.</div>
-  ) : (
-    <ul className="text-sm divide-y">
-      {recent.slice(0, 10).map((f) => (
-        <li key={f.id} className="py-2 flex items-center justify-between">
-          <a
-            href={`/admin/invoices/${f.id}`}
-            className="group flex-1 min-w-0"
-            title="Abrir detalle"
-          >
-            <div className="font-medium group-hover:underline truncate">
-              {new Date(f.date).toLocaleString()}
-            </div>
-            <div className="text-gray-600 truncate">
-              {f.patient?.fullName || "—"}
-              {f.patient?.document ? ` · ${f.patient.document}` : ""}
-            </div>
-          </a>
+        {recent.length === 0 ? (
+          <div className="text-sm text-gray-500">Aún no hay facturas.</div>
+        ) : (
+          <ul className="text-sm divide-y">
+            {recent.slice(0, 10).map((f) => (
+              <li key={f.id} className="py-2 flex items-center justify-between">
+                <a
+                  href={`/admin/invoices/${f.id}`}
+                  className="group flex-1 min-w-0"
+                  title="Abrir detalle"
+                >
+                  <div className="font-medium group-hover:underline truncate">
+                    {new Date(f.date).toLocaleString()}
+                  </div>
+                  <div className="text-gray-600 truncate">
+                    {f.patient?.fullName || "—"}
+                    {f.patient?.document ? ` · ${f.patient.document}` : ""}
+                  </div>
+                </a>
 
-          <div className="flex items-center gap-3 pl-3">
-            <div className="font-semibold whitespace-nowrap">
-              $ {fmt(f.total || f.items.reduce((s, it) => s + (it.subtotal || 0), 0))}
-            </div>
-            <a
-              href={`/admin/invoices/${f.id}`}
-              className="rounded-md bg-violet-600 px-3 py-1.5 text-white text-xs hover:opacity-95"
-            >
-              Ver
-            </a>
-          </div>
-        </li>
-      ))}
-    </ul>
-  )}
-</section>
+                <div className="flex items-center gap-3 pl-3">
+                  <div className="font-semibold whitespace-nowrap">
+                    $ {fmt(f.total || f.items?.reduce?.((s, it) => s + (it.subtotal || 0), 0))}
+                  </div>
+                  <a
+                    href={`/admin/invoices/${f.id}`}
+                    className="rounded-md bg-violet-600 px-3 py-1.5 text-white text-xs hover:opacity-95"
+                  >
+                    Ver
+                  </a>
 
+                  {/* 👇 Nuevo: eliminar factura */}
+                  <DeleteInvoiceButton id={f.id} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
