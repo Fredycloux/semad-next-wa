@@ -1,3 +1,5 @@
+// src/app/admin/invoices/page.jsx
+
 "use client";
 import { useEffect, useMemo, useState } from "react";
 
