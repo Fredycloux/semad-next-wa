@@ -349,19 +349,11 @@ export default function InvoicesPage() {
 
                   {/* 👇 Nuevo: eliminar factura */}
                    <ConfirmDeleteButton
-                    label="Eliminar"
-                    confirmingLabel="Eliminando..."
-                    confirmText="¿Eliminar esta factura? Esta acción no se puede deshacer."
-                    onDelete={async () => {
-                      const res = await fetch(`/api/admin/invoices/${f.id}`, { method: "DELETE" });
-                      try {
-                        const j = await res.json();
-                        if (!res.ok || j?.ok === false) throw new Error(j?.error || "No se pudo eliminar");
-                      } catch {
-                        if (!res.ok) throw new Error("No se pudo eliminar");
-                      }
-                    }}
-                  />
+                      label="Eliminar"
+                      confirmingLabel="Eliminando..."
+                      confirmText="¿Eliminar esta factura? Esta acción no se puede deshacer."
+                      url={`/api/admin/invoices/${f.id}`}
+                    />
                 </div>
               </li>
             ))}
