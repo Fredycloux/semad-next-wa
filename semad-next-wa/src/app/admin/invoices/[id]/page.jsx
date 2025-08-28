@@ -1,12 +1,12 @@
-// src/app/admin/invoices/[id]/page.jsx
-
-
 import { prisma } from "@/lib/prisma";
+import DeleteInvoiceButton from "@/components/DeleteInvoiceButton";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function money(v){ return new Intl.NumberFormat("es-CO").format(Number(v||0)); }
+function money(v) {
+  return new Intl.NumberFormat("es-CO").format(Number(v || 0));
+}
 
 export default async function InvoiceDetailPage({ params }) {
   const id = params?.id;
@@ -22,14 +22,17 @@ export default async function InvoiceDetailPage({ params }) {
     <div className="max-w-4xl mx-auto p-4 space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Factura {inv.folio || inv.id}</h1>
+          <h1 className="text-xl font-semibold">
+            Factura {inv.folio || inv.id}
+          </h1>
           <div className="text-sm text-gray-600">
             {new Date(inv.date).toLocaleString()}
           </div>
           <div className="mt-2 text-sm">
             <div className="font-medium">{inv.patient?.fullName}</div>
             <div className="text-gray-600">
-              {inv.patient?.document || "—"} {inv.patient?.phone ? `· ${inv.patient.phone}` : ""}
+              {inv.patient?.document || "—"}{" "}
+              {inv.patient?.phone ? `· ${inv.patient.phone}` : ""}
             </div>
           </div>
         </div>
@@ -50,12 +53,9 @@ export default async function InvoiceDetailPage({ params }) {
             alt="QR de la factura"
             className="w-32 h-32 border rounded"
           />
-          {/* Si algún navegador te cachea el QR, usa esta variante: */}
-          {/* <img
-            src={`/api/admin/invoices/${inv.id}/qr?v=${new Date(inv.updatedAt || inv.date).getTime()}`}
-            alt="QR de la factura"
-            className="w-32 h-32 border rounded"
-          /> */}
+
+          {/* 👇 Nuevo: eliminar factura directamente desde el detalle */}
+          <DeleteInvoiceButton id={inv.id} />
         </div>
       </div>
 
