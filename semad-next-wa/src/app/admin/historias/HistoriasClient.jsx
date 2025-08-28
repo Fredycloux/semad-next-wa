@@ -59,7 +59,7 @@ export default function HistoriasClient({ q }) {
                     confirmingLabel="Eliminando..."
                     confirmText="¿Eliminar esta historia clínica? Esta acción no se puede deshacer."
                     onDelete={async () => {
-                      const res = await fetch(`/api/admin/invoices/${f.id}`, { method: "DELETE" });
+                      const res = await fetch(`/api/admin/patients/${p.id}`, { method: "DELETE" });
                       let ok = res.ok;
                       try {
                         const j = await res.json();
