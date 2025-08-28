@@ -9,46 +9,47 @@ export default function ConfirmDeleteButton({
   label = "Eliminar", 
   confirmingLabel = "Eliminando…", 
   confirmText = "¿Seguro que deseas eliminar? Esta acción no se puede deshacer.", 
-  afterDeleteHref = "", // <- si la pasas, redirige allí; si no, hace router.refresh() //
-  className = "text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700",
+  afterDeleteHref = "", // <- si la pasas, redirige allí; si no, hace router.refresh()
+  //className = "text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700",
+  className = "text-sm text-red-600 hover:underline", 
 
-className = "text-sm text-red-600 hover:underline", 
-
-}) 
-{ 
+}) { 
   const router = useRouter(); 
   const [loading, setLoading] = useState(false); 
-  const handle = async () => 
-    { if (loading) 
-      return; 
-     if (!window.confirm(confirmText)) 
-       return; 
+  
+  const handle = async () => { 
+    if (loading) return; 
+     if (!window.confirm(confirmText)) return; 
      setLoading(true); 
      try { 
        const r = await fetch(url, { method: "DELETE" }); 
        let ok = r.ok; 
-       try { const j = await r.json(); 
+       try 
+       { const j = await r.json(); 
             if (j?.ok === false) ok = false; 
-           } 
-       catch { // si el endpoint no devuelve JSON, nos quedamos con r.ok 
+       } catch { 
+         // si el endpoint no devuelve JSON, nos quedamos con r.ok 
        }
 
        if (!ok) 
          throw new Error("No se pudo eliminar. Revisa el endpoint DELETE."); 
-       if (afterDeleteHref) { // redirige (ej: a la lista de facturas) 
+       if (afterDeleteHref) { 
+         // redirige (ej: a la lista de facturas) 
          router.replace(afterDeleteHref); 
-       } else { // permanece en la vista pero refresca datos 
+       } else { 
+         // permanece en la vista pero refresca datos 
          router.refresh(); 
        } 
      } catch (e) { 
        alert(e.message || "Error al eliminar"); 
-     } finally { setLoading(false); 
+     } finally { 
+       setLoading(false); 
                } 
-    }; return 
-    ( 
+    }; 
+  
+  return ( 
       <button type="button" className={className} disabled={loading} onClick={handle}>
-        {loading ? confirmingLabel : label
-        }
+        {loading ? confirmingLabel : label}
       </button> 
     ); 
 }
