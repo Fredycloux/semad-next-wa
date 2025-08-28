@@ -1,3 +1,5 @@
+//src/app/api/admin/invoices/[id]/route.js
+
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
