@@ -55,20 +55,21 @@ export default function HistoriasClient({ q }) {
 
                 {/* 👇 Botón eliminar historia */}
                 <ConfirmDeleteButton
-                  label="Eliminar"
-                  confirmingLabel="Eliminando..."
-                  confirmText="¿Eliminar esta historia clínica? Esta acción no se puede deshacer."
-                  onDelete={async () => {
-                    const res = await fetch(`/api/admin/patients/${p.id}`, { method: "DELETE" });
-                    try {
-                      const j = await res.json();
-                      if (!res.ok || j?.ok === false) throw new Error(j?.error || "No se pudo eliminar");
-                      // ✅ quitar del estado inmediatamente
-                      setPatients(prev => prev.filter(x => x.id !== p.id));
-                    } catch {
-                      if (!res.ok) throw new Error("No se pudo eliminar");
-                    }
-                  }}
+                    label="Eliminar"
+                    confirmingLabel="Eliminando..."
+                    confirmText="¿Eliminar esta historia clínica? Esta acción no se puede deshacer."
+                    onDelete={async () => {
+                      const res = await fetch(`/api/admin/invoices/${f.id}`, { method: "DELETE" });
+                      let ok = res.ok;
+                      try {
+                        const j = await res.json();
+                        if (j?.ok === false) ok = false;
+                      } catch {/* ignore non-JSON */}
+                      if (!ok) throw new Error("No se pudo eliminar");
+                  
+                      // 🔥 Actualiza la UI inmediato, sin refrescar la página:
+                      setRecent(prev => prev.filter(x => x.id !== f.id));
+                    }}
                 />
               </div>
             </div>
