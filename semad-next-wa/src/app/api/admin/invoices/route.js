@@ -110,6 +110,7 @@ export async function POST(req) {
   } catch (e) {
     return Response.json({ ok: false, error: String(e?.message || e) }, { status: 500 });
   }
+}
 
   export async function DELETE(req) {
   try {
