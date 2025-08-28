@@ -23,23 +23,6 @@ export async function GET() {
       });
     }
 
-    // Procedimientos base (COP)
-    const procedures = [
-      { code: 'OD001', name: 'Consulta inicial', price: 60000 },
-      { code: 'OD010', name: 'Profilaxis',       price: 90000 },
-      { code: 'OD020', name: 'Resina',           price: 180000 },
-      { code: 'OD030', name: 'Endodoncia',       price: 750000 },
-      { code: 'OD040', name: 'Extracción',       price: 220000 },
-      { code: 'OD050', name: 'Corona',           price: 1200000 },
-    ];
-    for (const p of procedures) {
-      await prisma.procedure.upsert({
-        where: { code: p.code },
-        update: { name: p.name, price: p.price },
-        create: { code: p.code, name: p.name, price: p.price },
-      });
-    }
-
     return Response.json({ ok: true });
   } catch (e) {
     console.error(e);
