@@ -1,14 +1,25 @@
 //src/app/admin/invoices/[id]/page.jsx
 
-
 import { prisma } from "@/lib/prisma";
 import ConfirmDeleteButton from "@/components/ConfirmDeleteButton";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+export const runtime  = "nodejs";
 
-function money(v) {
-  return new Intl.NumberFormat("es-CO").format(Number(v || 0));
+function money(v){ return new Intl.NumberFormat("es-CO").format(Number(v||0)); }
+
+// ─── Render del QR en cliente ────────────────────────────────────────────────
+function ClientQR({ id }) {
+  "use client";
+  // Le agrego un cache-buster por si el navegador insiste en cachear
+  const qs = typeof window !== "undefined" ? `?v=${Date.now()}` : "";
+  return (
+    <img
+      src={`/api/admin/invoices/${id}/qr${qs}`}
+      alt="QR de la factura"
+      className="w-32 h-32 border rounded"
+    />
+  );
 }
 
 export default async function InvoiceDetailPage({ params }) {
@@ -21,26 +32,30 @@ export default async function InvoiceDetailPage({ params }) {
   });
   if (!inv) return <div className="p-4">Factura no encontrada.</div>;
 
+  // Fecha segura
+  let fecha = "—";
+  try {
+    if (inv.date) {
+      const d = new Date(inv.date);
+      if (!Number.isNaN(d.getTime())) fecha = d.toLocaleString();
+    }
+  } catch {}
+
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold">
-            Factura {inv.folio || inv.id}
-          </h1>
-          <div className="text-sm text-gray-600">
-            {inv.date ? new Date(inv.date).toLocaleString() : "—"}
-          </div>
+          <h1 className="text-xl font-semibold">Factura {inv.folio || inv.id}</h1>
+          <div className="text-sm text-gray-600">{fecha}</div>
           <div className="mt-2 text-sm">
-            <div className="font-medium">{inv.patient?.fullName}</div>
+            <div className="font-medium">{inv.patient?.fullName || "—"}</div>
             <div className="text-gray-600">
-              {inv.patient?.document || "—"}{" "}
-              {inv.patient?.phone ? `· ${inv.patient.phone}` : ""}
+              {inv.patient?.document || "—"}{inv.patient?.phone ? ` · ${inv.patient.phone}` : ""}
             </div>
           </div>
         </div>
 
-        {/* Acciones y QR */}
+        {/* Acciones + QR (en cliente) */}
         <div className="flex flex-col items-center gap-3 text-right">
           <a
             href={`/api/admin/invoices/${inv.id}/pdf`}
@@ -51,31 +66,18 @@ export default async function InvoiceDetailPage({ params }) {
             Ver / Descargar PDF
           </a>
 
-          <img
-            src={`/api/admin/invoices/${inv.id}/qr`}
-            alt="QR de la factura"
-            className="w-32 h-32 border rounded"
-          />
+          {/* QR en cliente */}
+          <ClientQR id={inv.id} />
 
-          {/* 👇 Nuevo: eliminar factura directamente desde el detalle */}
-            <ConfirmDeleteButton
-                label="Eliminar"
-                confirmingLabel="Eliminando..."
-                confirmText="¿Eliminar esta factura? Esta acción no se puede deshacer."
-                onDelete={async () => {
-                  const res = await fetch(`/api/admin/invoices/${inv.id}`, { method: "DELETE" });
-                  // si tu endpoint devuelve JSON con {ok:true/false}
-                  try {
-                    const j = await res.json();
-                    if (!res.ok || j?.ok === false) throw new Error(j?.error || "No se pudo eliminar");
-                  } catch {
-                    if (!res.ok) throw new Error("No se pudo eliminar");
-                  }
-                  // No hace falta hacer nada más: tu botón ya llama router.refresh()
-                  // Si prefieres redirigir al listado, avísame y te paso una versión con afterDeleteHref.
-                }}
-              />
-            </div>
+          <ConfirmDeleteButton
+            // versión con URL + redirección
+            url={`/api/admin/invoices/${inv.id}`}
+            label="Eliminar"
+            confirmingLabel="Eliminando..."
+            confirmText="¿Eliminar esta factura? Esta acción no se puede deshacer."
+            afterDeleteHref="/admin/invoices"
+          />
+        </div>
       </div>
 
       <div className="rounded-xl border overflow-x-auto">
@@ -91,7 +93,7 @@ export default async function InvoiceDetailPage({ params }) {
             </tr>
           </thead>
           <tbody>
-            {inv.items.map((it) => (
+            {inv.items?.map?.((it) => (
               <tr key={it.id} className="border-t">
                 <td className="p-2">{it.procedureCode}</td>
                 <td className="p-2">{it.procedure?.name || "—"}</td>
@@ -111,3 +113,4 @@ export default async function InvoiceDetailPage({ params }) {
     </div>
   );
 }
+
