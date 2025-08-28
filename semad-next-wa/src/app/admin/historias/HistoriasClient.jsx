@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import ConfirmDeleteButton from "@/components/ConfirmDeleteButton";
 
 export default function HistoriasClient({ q }) {
   const [patients, setPatients] = useState([]);
