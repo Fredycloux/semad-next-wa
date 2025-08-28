@@ -1,7 +1,7 @@
 // src/app/admin/invoices/page.jsx
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import DeleteInvoiceButton from "@/components/DeleteInvoiceButton";
+import ConfirmDeleteButton from "@/components/ConfirmDeleteButton";
 
 function fmt(n) {
   return new Intl.NumberFormat("es-CO").format(Number(n || 0));
@@ -347,7 +347,20 @@ export default function InvoicesPage() {
                   </a>
 
                   {/* 👇 Nuevo: eliminar factura */}
-                  <DeleteInvoiceButton id={f.id} />
+                   <ConfirmDeleteButton
+                    label="Eliminar"
+                    confirmingLabel="Eliminando..."
+                    confirmText="¿Eliminar esta factura? Esta acción no se puede deshacer."
+                    onDelete={async () => {
+                      const res = await fetch(`/api/admin/invoices/${f.id}`, { method: "DELETE" });
+                      try {
+                        const j = await res.json();
+                        if (!res.ok || j?.ok === false) throw new Error(j?.error || "No se pudo eliminar");
+                      } catch {
+                        if (!res.ok) throw new Error("No se pudo eliminar");
+                      }
+                    }}
+                  />
                 </div>
               </li>
             ))}
