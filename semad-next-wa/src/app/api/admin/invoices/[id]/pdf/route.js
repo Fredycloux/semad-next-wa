@@ -1,3 +1,6 @@
+//src/app/api/admin/invoices/[id]/pdf/route.js
+
+
 import { prisma } from "@/lib/prisma";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
