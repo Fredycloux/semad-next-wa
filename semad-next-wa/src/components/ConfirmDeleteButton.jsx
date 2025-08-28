@@ -9,7 +9,8 @@ export default function ConfirmDeleteButton({
   confirmingLabel = "Eliminando…",
   confirmText = "¿Seguro que deseas eliminar? Esta acción no se puede deshacer.",
   afterDeleteHref = "",    // <- si la pasas, redirige allí; si no, hace router.refresh()
-  className = "text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700",
+  //className = "text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700",
+  className = "text-sm text-red-600 hover:underline",
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
