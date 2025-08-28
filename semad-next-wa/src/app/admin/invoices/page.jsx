@@ -341,7 +341,8 @@ export default function InvoicesPage() {
                   </div>
                   <a
                     href={`/admin/invoices/${f.id}`}
-                    className="rounded-md bg-violet-600 px-3 py-1.5 text-white text-xs hover:opacity-95"
+                    //className="rounded-md bg-violet-600 px-3 py-1.5 text-white text-xs hover:opacity-95"
+                    className="text-sm text-violet-700 hover:underline"
                   >
                     Ver
                   </a>
