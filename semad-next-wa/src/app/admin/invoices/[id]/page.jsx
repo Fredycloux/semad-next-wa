@@ -29,7 +29,7 @@ export default async function InvoiceDetailPage({ params }) {
             Factura {inv.folio || inv.id}
           </h1>
           <div className="text-sm text-gray-600">
-            {new Date(inv.date).toLocaleString()}
+            {inv.date ? new Date(inv.date).toLocaleString() : "—"}
           </div>
           <div className="mt-2 text-sm">
             <div className="font-medium">{inv.patient?.fullName}</div>
