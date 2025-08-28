@@ -1,3 +1,6 @@
+// src/app/api/admin/histories/[id]/route.js
+
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
