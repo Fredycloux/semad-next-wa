@@ -54,7 +54,8 @@ export default async function HistoriasPage({ searchParams }) {
               </div>
               <Link
                 href={`/admin/patients/${p.id}`}
-                className="text-sm rounded-lg bg-violet-600 text-white px-3 py-1.5"
+                //className="text-sm rounded-lg bg-violet-600 text-white px-3 py-1.5"
+                className="text-sm text-violet-700 hover:underline"
               >
                 Abrir historia
               </Link>
