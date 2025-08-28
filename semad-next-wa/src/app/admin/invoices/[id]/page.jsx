@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import DeleteInvoiceButton from "@/components/DeleteInvoiceButton";
+import ConfirmDeleteButton from "@/components/ConfirmDeleteButton";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -55,8 +55,24 @@ export default async function InvoiceDetailPage({ params }) {
           />
 
           {/* 👇 Nuevo: eliminar factura directamente desde el detalle */}
-          <DeleteInvoiceButton id={inv.id} />
-        </div>
+            <ConfirmDeleteButton
+                label="Eliminar"
+                confirmingLabel="Eliminando..."
+                confirmText="¿Eliminar esta factura? Esta acción no se puede deshacer."
+                onDelete={async () => {
+                  const res = await fetch(`/api/admin/invoices/${inv.id}`, { method: "DELETE" });
+                  // si tu endpoint devuelve JSON con {ok:true/false}
+                  try {
+                    const j = await res.json();
+                    if (!res.ok || j?.ok === false) throw new Error(j?.error || "No se pudo eliminar");
+                  } catch {
+                    if (!res.ok) throw new Error("No se pudo eliminar");
+                  }
+                  // No hace falta hacer nada más: tu botón ya llama router.refresh()
+                  // Si prefieres redirigir al listado, avísame y te paso una versión con afterDeleteHref.
+                }}
+              />
+            </div>
       </div>
 
       <div className="rounded-xl border overflow-x-auto">
