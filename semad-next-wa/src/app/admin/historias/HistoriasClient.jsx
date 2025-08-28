@@ -52,16 +52,6 @@ export default function HistoriasClient({ q }) {
                 >
                   Abrir historia
                 </Link>
-
-                {/* 👇 Botón eliminar historia // versión con URL + redirección */}
-                  <ConfirmDeleteButton
-                    // versión con URL + redirección
-                    url={`/api/admin/invoices/${inv.id}`}
-                    label="Eliminar"
-                    confirmingLabel="Eliminando..."
-                    confirmText="¿Eliminar esta factura? Esta acción no se puede deshacer."
-                    afterDeleteHref="/admin/invoices"
-                  />
               </div>
             </div>
           ))
