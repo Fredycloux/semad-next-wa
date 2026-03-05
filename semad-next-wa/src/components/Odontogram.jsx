@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { LABELS, colorForLabel } from "@/lib/odontogram-config";
 
 // FDI adulto
-const ADULT_TOP    = ["18","17","16","15","14","13","12","11","21","22","23","24","25","26","27","28"];
-const ADULT_BOTTOM = ["48","47","46","45","44","43","42","41","31","32","33","34","35","36","37","38"];
+const ADULT_TOP = ["18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28"];
+const ADULT_BOTTOM = ["48", "47", "46", "45", "44", "43", "42", "41", "31", "32", "33", "34", "35", "36", "37", "38"];
 // FDI infantil (centrado en 16 columnas)
-const CHILD_TOP    = ["55","54","53","52","51","61","62","63","64","65"];
-const CHILD_BOTTOM = ["85","84","83","82","81","71","72","73","74","75"];
+const CHILD_TOP = ["55", "54", "53", "52", "51", "61", "62", "63", "64", "65"];
+const CHILD_BOTTOM = ["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"];
 // superficies (en BD usamos O, M, D, B, L)
 const SURFACES = ["O", "M", "D", "B", "L"];
 
@@ -16,6 +16,8 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
   const [dentition, setDentition] = useState(initialDentition === "CHILD" ? "CHILD" : "ADULT");
   const [label, setLabel] = useState(LABELS[0]);
   const [loading, setLoading] = useState(true);
+
+  const [periodontalExam, setPeriodontalExam] = useState("");
 
   // key = `${tooth}|${surface}` -> { id?, tooth, surface, label, color? }
   const [marks, setMarks] = useState(() => {
@@ -27,6 +29,8 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
     return m;
   });
 
+  const [conditions, setConditions] = useState(new Map());
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -34,12 +38,24 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
         const res = await fetch(`/api/odontogram/${patientId}`, { cache: "no-store" });
         const j = await res.json();
         if (!alive) return;
+
         const m = new Map();
         (j.entries || []).forEach(e => {
           const s = (e.surface || "O").toUpperCase();
           m.set(`${e.tooth}|${s}`, { ...e, surface: s });
         });
         setMarks(m);
+
+        const cMap = new Map();
+        (j.toothConditions || []).forEach(c => {
+          cMap.set(c.tooth, c);
+        });
+        setConditions(cMap);
+
+        if (j.periodontalExam) {
+          setPeriodontalExam(j.periodontalExam);
+        }
+
       } finally {
         if (alive) setLoading(false);
       }
@@ -55,7 +71,7 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dentition: next }),
       });
-    } catch {}
+    } catch { }
   }
 
   async function toggleSurface(tooth, surface) {
@@ -64,11 +80,8 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
 
     const key = `${tooth}|${s}`;
     const exists = marks.get(key);
-
-    // color determinado por el diagnóstico actual
     const chosenColor = colorForLabel(label);
 
-    // Optimista
     setMarks(prev => {
       const m = new Map(prev);
       if (exists) m.delete(key);
@@ -85,8 +98,6 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
           tooth,
           surface: s,
           label,
-          // no enviamos color si quieres forzar que el server lo derive,
-          // pero lo mandamos para que quede igual a lo que viste en UI:
           color: chosenColor,
           on: !exists,
         }),
@@ -103,7 +114,6 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
         });
       }
     } catch (e) {
-      // rollback
       setMarks(prev => {
         const m = new Map(prev);
         if (exists) m.set(key, exists);
@@ -114,9 +124,36 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
     }
   }
 
+  async function updateCondition(tooth, field, value) {
+    setConditions(prev => {
+      const m = new Map(prev);
+      const cur = m.get(tooth) || { tooth };
+      m.set(tooth, { ...cur, [field]: value });
+      return m;
+    });
+
+    try {
+      await fetch("/api/odontogram/tooth-condition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId, tooth, field, value }),
+      });
+    } catch { }
+  }
+
+  async function savePeriodontalExam() {
+    try {
+      await fetch("/api/odontogram/periodontal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId, periodontalExam }),
+      });
+    } catch { }
+  }
+
   const getEntry = (tooth, surface) => marks.get(`${tooth}|${surface}`);
 
-  function ToothSVG({ tooth, size = 52 }) {
+  function ToothSVG({ tooth, size = 48 }) {
     const pad = 2;
     const w = size, h = size;
     const centerSize = w * 0.36;
@@ -136,28 +173,23 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
     };
 
     return (
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-        <rect x="0.5" y="0.5" width={w-1} height={h-1} rx="8" ry="8" fill="#fff" stroke="#E5E7EB" />
-        {/* B (vestibular/buccal) */}
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="mx-auto block">
+        <rect x="0.5" y="0.5" width={w - 1} height={h - 1} rx="8" ry="8" fill="#fff" stroke="#E5E7EB" />
         <rect x={pad} y={pad} width={w - pad * 2} height={side}
-              fill={fill("B")} stroke={stroke("B")}
-              onClick={() => toggleSurface(tooth, "B")} style={{ cursor: "pointer" }}/>
-        {/* L (lingual/palatino) */}
+          fill={fill("B")} stroke={stroke("B")}
+          onClick={() => toggleSurface(tooth, "B")} style={{ cursor: "pointer" }} />
         <rect x={pad} y={h - pad - side} width={w - pad * 2} height={side}
-              fill={fill("L")} stroke={stroke("L")}
-              onClick={() => toggleSurface(tooth, "L")} style={{ cursor: "pointer" }}/>
-        {/* M */}
+          fill={fill("L")} stroke={stroke("L")}
+          onClick={() => toggleSurface(tooth, "L")} style={{ cursor: "pointer" }} />
         <rect x={pad} y={cy} width={side} height={centerSize}
-              fill={fill("M")} stroke={stroke("M")}
-              onClick={() => toggleSurface(tooth, "M")} style={{ cursor: "pointer" }}/>
-        {/* D */}
+          fill={fill("M")} stroke={stroke("M")}
+          onClick={() => toggleSurface(tooth, "M")} style={{ cursor: "pointer" }} />
         <rect x={w - pad - side} y={cy} width={side} height={centerSize}
-              fill={fill("D")} stroke={stroke("D")}
-              onClick={() => toggleSurface(tooth, "D")} style={{ cursor: "pointer" }}/>
-        {/* O */}
+          fill={fill("D")} stroke={stroke("D")}
+          onClick={() => toggleSurface(tooth, "D")} style={{ cursor: "pointer" }} />
         <rect x={cx} y={cy} width={centerSize} height={centerSize} rx="6"
-              fill={fill("O")} stroke={stroke("O")}
-              onClick={() => toggleSurface(tooth, "O")} style={{ cursor: "pointer" }}/>
+          fill={fill("O")} stroke={stroke("O")}
+          onClick={() => toggleSurface(tooth, "O")} style={{ cursor: "pointer" }} />
         <text x={w - 6} y={h - 6} textAnchor="end" fontSize="9" fill="#9CA3AF">{tooth}</text>
       </svg>
     );
@@ -177,48 +209,100 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium">Dentición:</span>
-        <button type="button" onClick={() => switchDentition("ADULT")}
-          className={`rounded-full px-3 py-1 text-sm border ${dentition === "ADULT" ? "bg-violet-600 text-white" : "bg-white"}`}>
-          Adulto
-        </button>
-        <button type="button" onClick={() => switchDentition("CHILD")}
-          className={`rounded-full px-3 py-1 text-sm border ${dentition === "CHILD" ? "bg-violet-600 text-white" : "bg-white"}`}>
-          Niño
-        </button>
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium">Dentición:</span>
+          <button type="button" onClick={() => switchDentition("ADULT")}
+            className={`rounded-full px-3 py-1 text-sm border ${dentition === "ADULT" ? "bg-violet-600 text-white" : "bg-white"}`}>
+            Adulto
+          </button>
+          <button type="button" onClick={() => switchDentition("CHILD")}
+            className={`rounded-full px-3 py-1 text-sm border ${dentition === "CHILD" ? "bg-violet-600 text-white" : "bg-white"}`}>
+            Niño
+          </button>
+        </div>
+
+        <div className="max-w-sm ml-auto w-full">
+          <div className="text-xs mb-1 text-gray-500">Diagnóstico</div>
+          <select value={label} onChange={(e) => setLabel(e.target.value)} className="w-full border rounded-lg px-3 py-2">
+            {LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </div>
       </div>
 
-      <div className="max-w-sm">
-        <div className="text-xs mb-1 text-gray-500">Diagnóstico</div>
-        <select value={label} onChange={(e) => setLabel(e.target.value)} className="w-full border rounded-lg px-3 py-2">
-          {LABELS.map(l => <option key={l} value={l}>{l}</option>)}
-        </select>
-        <p className="text-[11px] text-gray-500 mt-1">
-          El color se asigna automáticamente según el diagnóstico.
-        </p>
+      <div className="mb-4">
+        <div className="text-sm font-medium mb-1">Notas Examen Periodontal</div>
+        <textarea
+          className="w-full border rounded-lg p-3 text-sm focus:ring-1 focus:ring-violet-500"
+          rows={2}
+          value={periodontalExam}
+          onChange={e => setPeriodontalExam(e.target.value)}
+          onBlur={savePeriodontalExam}
+          placeholder="Escriba aquí los hallazgos del examen periodontal (se guarda automáticamente al salir del campo)..."
+        />
       </div>
 
       {loading ? (
         <div className="text-sm text-gray-500">Cargando odontograma…</div>
       ) : (
-        <>
-          {rows.map((row, idx) => (
-            <div key={idx} className="grid [grid-template-columns:repeat(16,minmax(0,1fr))] gap-2">
-              {row.map((t, i) =>
-                t ? (
-                  <div key={t} className="rounded-lg border bg-white/60 backdrop-blur flex items-center justify-center">
-                    <ToothSVG tooth={t} />
-                  </div>
-                ) : <div key={i} />
-              )}
-            </div>
-          ))}
-        </>
+        <div className="space-y-6 overflow-x-auto pb-4">
+          {rows.map((row, idx) => {
+            const isTop = idx === 0;
+            return (
+              <div key={idx} className="min-w-[800px] grid [grid-template-columns:repeat(16,minmax(0,1fr))] gap-1">
+                {row.map((t, i) =>
+                  t ? (
+                    <div key={t} className="rounded border bg-white/60 backdrop-blur p-1 flex flex-col gap-1">
+                      <div className="text-center font-semibold text-xs text-gray-700 bg-gray-50 rounded mb-1">{t}</div>
+
+                      {isTop && (
+                        <div className="space-y-1">
+                          <input type="text" placeholder="Vestibular" title="Vestibular"
+                            className="w-full text-center text-[10px] border rounded bg-white"
+                            value={conditions.get(t)?.vestibular || ""}
+                            onChange={e => updateCondition(t, "vestibular", e.target.value)} />
+                          <input type="text" placeholder="Palatino" title="Palatino"
+                            className="w-full text-center text-[10px] border rounded bg-white"
+                            value={conditions.get(t)?.lingual || ""}
+                            onChange={e => updateCondition(t, "lingual", e.target.value)} />
+                          <input type="text" placeholder="Movilidad" title="Movilidad"
+                            className="w-full text-center text-[10px] border rounded bg-white"
+                            value={conditions.get(t)?.mobility || ""}
+                            onChange={e => updateCondition(t, "mobility", e.target.value)} />
+                        </div>
+                      )}
+
+                      <div className="py-1">
+                        <ToothSVG tooth={t} />
+                      </div>
+
+                      {!isTop && (
+                        <div className="space-y-1">
+                          <input type="text" placeholder="Lingual" title="Lingual"
+                            className="w-full text-center text-[10px] border rounded bg-white"
+                            value={conditions.get(t)?.lingual || ""}
+                            onChange={e => updateCondition(t, "lingual", e.target.value)} />
+                          <input type="text" placeholder="Vestibular" title="Vestibular"
+                            className="w-full text-center text-[10px] border rounded bg-white"
+                            value={conditions.get(t)?.vestibular || ""}
+                            onChange={e => updateCondition(t, "vestibular", e.target.value)} />
+                          <input type="text" placeholder="Movilidad" title="Movilidad"
+                            className="w-full text-center text-[10px] border rounded bg-white"
+                            value={conditions.get(t)?.mobility || ""}
+                            onChange={e => updateCondition(t, "mobility", e.target.value)} />
+                        </div>
+                      )}
+                    </div>
+                  ) : <div key={i} />
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
 
       <p className="text-xs text-gray-500">
-        Clic en una zona para alternar. Se guarda automáticamente por diente/superficie.
+        Clic en el diente para marcar diagnóstico. Los campos de texto (Vestibular, Palatino/Lingual, Movilidad) se guardan automáticamente al escribir.
       </p>
     </div>
   );
