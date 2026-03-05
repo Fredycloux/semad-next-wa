@@ -79,7 +79,11 @@ export async function GET(req, { params }) {
   } catch { }
 
   // ---------- PDF ----------
-  const doc = new PDFDocument({ size: "A4", margin: 36 }); // márgenes más contenidos
+  const doc = new PDFDocument({
+    size: "A4",
+    margins: { top: 40, bottom: 50, left: 40, right: 40 },
+    bufferPages: true,
+  });
   const stream = new PassThrough();
   doc.pipe(stream);
 
@@ -87,151 +91,205 @@ export async function GET(req, { params }) {
   const right = doc.page.width - doc.page.margins.right;
   const CONTENT_W = right - left;
 
-  // Header
-  let y = 18;
+  const VIOLET = "#6d28d9";
+  const TEXT_MAIN = "#1e293b";
+  const TEXT_MUTED = "#64748b";
+  const BORDER = "#e2e8f0";
+  const BG_LIGHT = "#f8fafc";
+
+  let currentY = 40;
+
+  const checkPageBreak = (neededH) => {
+    if (currentY + neededH > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+      currentY = doc.page.margins.top;
+    }
+  };
+
+  const drawSectionTitle = (title) => {
+    checkPageBreak(40);
+    doc.font("Helvetica-Bold").fontSize(12).fillColor(VIOLET).text(title, left, currentY);
+    currentY += 16;
+    doc.moveTo(left, currentY).lineTo(right, currentY).lineWidth(1).strokeColor(BORDER).stroke();
+    currentY += 12;
+  };
+
+  const drawSectionBlock = (title, text) => {
+    drawSectionTitle(title);
+    const h = doc.heightOfString(text || "—", { width: CONTENT_W, align: "justify" });
+    checkPageBreak(h + 20);
+    doc.font("Helvetica").fontSize(10).fillColor(TEXT_MAIN).text(text || "—", left, currentY, { width: CONTENT_W, align: "justify" });
+    currentY += h + 20;
+  };
+
+  // 1. Header Logo and Title
   if (logoBuf) {
-    doc.image(logoBuf, left, y, { width: 140 });
+    doc.image(logoBuf, left, currentY, { height: 40 });
   }
+
   doc
     .fillColor(VIOLET)
     .font("Helvetica-Bold")
-    .fontSize(16)
-    .text("Reporte de Historia Clínica / Odontograma", left + 160, y + 8);
-  doc
-    .moveTo(left, y + 50)
-    .lineTo(right, y + 50)
-    .lineWidth(1)
-    .strokeColor(VIOLET)
-    .stroke();
-  y += 60;
+    .fontSize(18)
+    .text("Reporte de Historia Clínica", left, currentY + 4, { align: "right", width: CONTENT_W })
+    .fillColor(TEXT_MUTED)
+    .font("Helvetica")
+    .fontSize(10)
+    .text(`Generado: ${fmtDate(Date.now())}`, left, doc.y + 2, { align: "right", width: CONTENT_W });
 
-  // Bloque de datos del paciente
-  const colW = CONTENT_W * 0.62; // izquierda
-  doc
-    .roundedRect(left, y, colW, 90, 10)
-    .fillAndStroke(SOFT, VIOLET)
-    .fillColor("#111")
-    .font("Helvetica-Bold")
-    .fontSize(11)
-    .text("Paciente:", left + 12, y + 10)
-    .font("Helvetica")
-    .text(patient.fullName || "—", left + 85, y + 10)
-    .font("Helvetica-Bold")
-    .text("Documento:", left + 12, y + 28)
-    .font("Helvetica")
-    .text(patient.document || "—", left + 85, y + 28)
-    .font("Helvetica-Bold")
-    .text("Edad:", left + 12, y + 46)
-    .font("Helvetica")
-    .text(ageFrom(patient.birthDate), left + 85, y + 46)
-    .font("Helvetica-Bold")
-    .text("Teléfono:", left + 220, y + 10)
-    .font("Helvetica")
-    .text(patient.phone || "—", left + 290, y + 10)
-    .font("Helvetica-Bold")
-    .text("Email:", left + 220, y + 28)
-    .font("Helvetica")
-    .text(patient.email || "—", left + 290, y + 28, { width: colW - 300 })
-    .font("Helvetica-Bold")
-    .text("EPS:", left + 220, y + 46)
-    .font("Helvetica")
-    .text(patient.eps || "—", left + 290, y + 46);
+  currentY += 56;
+  doc.moveTo(left, currentY).lineTo(right, currentY).lineWidth(2).strokeColor(VIOLET).stroke();
+  currentY += 20;
 
-  // Chip de fecha de emisión (arriba a la derecha)
-  const chipX = left + colW + 12;
-  const chipY = y;
-  doc
-    .roundedRect(chipX, chipY, right - chipX, 38, 8)
-    .strokeColor(VIOLET)
-    .lineWidth(1)
-    .stroke();
-  doc
-    .font("Helvetica-Bold").fillColor(VIOLET).fontSize(10)
-    .text("Emitido:", chipX + 10, chipY + 9)
-    .font("Helvetica").fillColor("#111")
-    .text(fmtDate(Date.now()), chipX + 65, chipY + 9);
-  y += 100;
+  // 2. Patient Info Card
+  const cardH = 75;
+  doc.roundedRect(left, currentY, CONTENT_W, cardH, 6).fillColor(BG_LIGHT).fill();
+  doc.rect(left, currentY, 4, cardH).fillColor(VIOLET).fill(); // Left accent border
 
-  // Signos vitales (última consulta)
-  if (lastConsult) {
-    drawSectionTitle(doc, "Signos vitales", left, y); y += 18;
-    const chips = [
-      ["Temp", lastConsult.temperature ? `${lastConsult.temperature} °C` : "—"],
-      ["Pulso", lastConsult.pulse ? `${lastConsult.pulse} lpm` : "—"],
-      ["Resp", lastConsult.respiration ? `${lastConsult.respiration} rpm` : "—"],
-      ["TA", (lastConsult.sys || lastConsult.dia) ? `${lastConsult.sys || "—"}/${lastConsult.dia || "—"}` : "—"],
-    ];
-    let cx = left, cy = y, cw = 110, ch = 26, gap = 10;
-    for (const [k, v] of chips) {
-      doc.roundedRect(cx, cy, cw, ch, 6).fillAndStroke(SOFT, VIOLET);
-      doc.fillColor("#111").font("Helvetica-Bold").fontSize(10).text(`${k}:`, cx + 8, cy + 7);
-      doc.font("Helvetica").text(v, cx + 40, cy + 7);
-      cx += cw + gap;
+  let py = currentY + 14;
+  doc.font("Helvetica-Bold").fontSize(14).fillColor(TEXT_MAIN).text(patient.fullName || "—", left + 16, py);
+
+  py += 26;
+  const drawMetas = (items, startX, startY) => {
+    let px = startX;
+    for (const { label, value, w } of items) {
+      doc.font("Helvetica").fontSize(9).fillColor(TEXT_MUTED).text(`${label}:`, px, startY, { continued: true });
+      doc.font("Helvetica-Bold").fillColor(TEXT_MAIN).text(` ${value}`);
+      px += w;
     }
-    y += ch + 14;
+  };
+
+  drawMetas([
+    { label: "Documento", value: patient.document || "—", w: 140 },
+    { label: "Edad", value: ageFrom(patient.birthDate), w: 90 },
+    { label: "Teléfono", value: patient.phone || "—", w: 140 },
+    { label: "Email", value: patient.email || "—", w: 180 },
+  ], left + 16, py);
+
+  currentY += cardH + 25;
+
+  // 3. Vital Signs
+  if (lastConsult && (lastConsult.temperature || lastConsult.pulse || lastConsult.respiration || lastConsult.sys)) {
+    drawSectionTitle("Signos Vitales");
+    const chips = [
+      { label: "Temp", value: lastConsult.temperature ? `${lastConsult.temperature} °C` : "—" },
+      { label: "Pulso", value: lastConsult.pulse ? `${lastConsult.pulse} lpm` : "—" },
+      { label: "Resp", value: lastConsult.respiration ? `${lastConsult.respiration} rpm` : "—" },
+      { label: "TA", value: (lastConsult.sys || lastConsult.dia) ? `${lastConsult.sys || "—"}/${lastConsult.dia || "—"}` : "—" },
+    ];
+    let cx = left;
+    for (const c of chips) {
+      doc.roundedRect(cx, currentY, 115, 26, 4).fillAndStroke(BG_LIGHT, BORDER);
+      doc.fillColor(TEXT_MUTED).font("Helvetica").fontSize(9).text(`${c.label}: `, cx + 8, currentY + 7.5, { continued: true });
+      doc.fillColor(TEXT_MAIN).font("Helvetica-Bold").text(c.value);
+      cx += 130;
+    }
+    currentY += 26 + 25;
   }
 
-  // Anamnesis, Diagnóstico, Plan, Prescripción, Alergias, Antecedentes
-  drawSectionBlock(doc, "Alergias", patient.allergies || "—", left, y); y += blockHeight(doc);
-  drawSectionBlock(doc, "Antecedentes", patient.medicalHistory || "—", left, y); y += blockHeight(doc);
+  // 4. Clinical Blocks
+  if (patient.eps) {
+    drawSectionTitle("Datos Clínicos");
+    doc.font("Helvetica").fontSize(9).fillColor(TEXT_MUTED).text(`EPS: `, left, currentY, { continued: true });
+    doc.font("Helvetica-Bold").fillColor(TEXT_MAIN).text(patient.eps);
+    currentY += 20;
+  }
+
+  drawSectionBlock("Alergias", patient.allergies || "—");
+  drawSectionBlock("Antecedentes", patient.medicalHistory || "—");
 
   if (lastConsult) {
-    drawSectionBlock(doc, "Anamnesis", lastConsult.anamnesis || "—", left, y); y += blockHeight(doc);
-    drawSectionBlock(doc, "Diagnóstico", lastConsult.diagnosis || "—", left, y); y += blockHeight(doc);
-    drawSectionBlock(doc, "Plan de tratamiento", lastConsult.plan || "—", left, y); y += blockHeight(doc);
-    drawSectionBlock(doc, "Fórmula / Prescripción", lastConsult.prescription || "—", left, y); y += blockHeight(doc);
+    drawSectionBlock("Anamnesis (Última consulta)", lastConsult.anamnesis || "—");
+    drawSectionBlock("Diagnóstico", lastConsult.diagnosis || "—");
+    drawSectionBlock("Plan de tratamiento", lastConsult.plan || "—");
+    drawSectionBlock("Fórmula / Prescripción", lastConsult.prescription || "—");
   }
 
-  // Odontograma
-  y += 4;
-  drawSectionTitle(doc, "Odontograma", left, y); y += 10;
-  y = drawOdontogram(doc, left, y, teethSet);
+  // 5. Odontogram
+  drawSectionTitle("Odontograma");
+  checkPageBreak(120);
+  const rows = [
+    [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28],
+    [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38],
+  ];
+  const obW = 20, obH = 20, ogapX = 4, ogapY = 24, omidGap = 16;
+  const orowW = (8 * obW + 7 * ogapX) * 2 + omidGap;
+  const ostartX = left + (CONTENT_W - orowW) / 2;
 
-  // Examen Periodontal
+  for (let r = 0; r < rows.length; r++) {
+    let cx = ostartX;
+    for (let i = 0; i < rows[r].length; i++) {
+      if (i === 8) cx += omidGap;
+      const t = String(rows[r][i]);
+      const marked = teethSet.has(t);
+      doc.roundedRect(cx, currentY, obW, obH, 4).fillAndStroke(marked ? "#DDD6FE" : "#F1F5F9", marked ? VIOLET : BORDER);
+      doc.fillColor(marked ? VIOLET : TEXT_MUTED).font("Helvetica-Bold").fontSize(9).text(t, cx, currentY + 6, { width: obW, align: "center" });
+      cx += obW + ogapX;
+    }
+    currentY += obH + ogapY;
+  }
+  doc.font("Helvetica").fontSize(8).fillColor(TEXT_MUTED).text("Dientes resaltados en violeta tienen un procedimiento registrado.", left, currentY - 10, { align: "center", width: CONTENT_W });
+  currentY += 15;
+
+  // 6. Periodontal Exam
   if (patient.periodontalExam) {
-    y += 8;
-    drawSectionBlock(doc, "Examen Periodontal", patient.periodontalExam, left, y);
-    y += blockHeight();
+    drawSectionBlock("Notas de Examen Periodontal", patient.periodontalExam);
   }
 
-  // Tooth Conditions (Vestibular, Lingual, Movilidad)
   if (conditions.length > 0) {
-    y += 8;
-    drawSectionTitle(doc, "Condiciones por Diente (Examen Periodontal)", left, y); y += 14;
-    doc.font("Helvetica").fontSize(9).fillColor("#111");
+    drawSectionTitle("Condiciones por Diente (Examen Periodontal)");
+    checkPageBreak(50);
 
-    // Header for table
-    doc.font("Helvetica-Bold");
-    doc.text("Diente", left, y, { width: 50 });
-    doc.text("Vestibular", left + 60, y, { width: 80 });
-    doc.text("Palatino/Lingual", left + 150, y, { width: 100 });
-    doc.text("Movilidad", left + 260, y, { width: 80 });
-    y += 12;
-    doc.font("Helvetica");
+    doc.roundedRect(left, currentY, CONTENT_W, 22, 4).fillColor(BG_LIGHT).fill();
+    const tblY = currentY + 6;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(TEXT_MUTED);
+    doc.text("DIENTE", left + 10, tblY, { width: 50 });
+    doc.text("VESTIBULAR", left + 70, tblY, { width: 100 });
+    doc.text("PALATINO/LINGUAL", left + 190, tblY, { width: 120 });
+    doc.text("MOVILIDAD", left + 330, tblY, { width: 100 });
+    currentY += 30;
 
+    doc.font("Helvetica").fontSize(9).fillColor(TEXT_MAIN);
     for (const c of conditions.sort((a, b) => Number(a.tooth) - Number(b.tooth))) {
-      // Only print if there's actual data
       if (c.vestibular || c.lingual || c.mobility) {
-        doc.text(c.tooth, left, y, { width: 50 });
-        doc.text(c.vestibular || "-", left + 60, y, { width: 80 });
-        doc.text(c.lingual || "-", left + 150, y, { width: 100 });
-        doc.text(c.mobility || "-", left + 260, y, { width: 80 });
-        y += 12;
+        checkPageBreak(25);
+        const yBase = currentY;
+        doc.font("Helvetica-Bold").text(c.tooth, left + 10, yBase, { width: 50 });
+        doc.font("Helvetica").text(c.vestibular || "-", left + 70, yBase, { width: 100 });
+        doc.text(c.lingual || "-", left + 190, yBase, { width: 120 });
+        doc.text(c.mobility || "-", left + 330, yBase, { width: 100 });
+        currentY += 18;
+        doc.moveTo(left + 10, currentY - 6).lineTo(right - 10, currentY - 6).lineWidth(0.5).strokeColor("#f1f5f9").stroke();
       }
     }
+    currentY += 15;
   }
 
-  // Procedimientos por diente (según facturación)
-  y += 8;
-  drawSectionTitle(doc, "Procedimientos por diente", left, y); y += 8;
-  doc.font("Helvetica").fontSize(10).fillColor("#111");
+  // 7. Procedures
+  drawSectionTitle("Procedimientos Detallados");
   if (byTooth.size === 0) {
-    doc.text("—", left, y);
+    doc.font("Helvetica").fontSize(10).fillColor(TEXT_MUTED).text("No hay procedimientos registrados.", left, currentY);
+    currentY += 20;
   } else {
     for (const [tooth, arr] of [...byTooth.entries()].sort((a, b) => Number(a[0]) - Number(b[0]))) {
-      doc.text(`${tooth}: ${arr.join(", ")}`, left, y, { width: CONTENT_W });
-      y += 14;
+      checkPageBreak(20);
+      doc.font("Helvetica-Bold").fontSize(10).fillColor(VIOLET).text(`Diente ${tooth}:`, left, currentY, { continued: true });
+      doc.font("Helvetica").fillColor(TEXT_MAIN).text(` ${arr.join(", ")}`);
+      currentY += 18;
     }
+    currentY += 10;
+  }
+
+  // Footer Pagination
+  const pages = doc.bufferedPageRange();
+  for (let i = 0; i < pages.count; i++) {
+    doc.switchToPage(i);
+    doc.font("Helvetica").fontSize(8).fillColor(TEXT_MUTED).text(
+      `Página ${i + 1} de ${pages.count}`,
+      left,
+      doc.page.height - 30,
+      { align: "center", width: CONTENT_W }
+    );
   }
 
   doc.end();
@@ -239,78 +297,8 @@ export async function GET(req, { params }) {
   return new Response(stream, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="historia-${patient.fullName || patientId}.pdf"`,
+      "Content-Disposition": `inline; filename="historia-${patient.document || patientId}.pdf"`,
       "Cache-Control": "no-store",
     },
   });
-}
-
-// ---------- helpers de dibujo ----------
-function drawSectionTitle(doc, title, x, y) {
-  doc
-    .font("Helvetica-Bold").fontSize(11).fillColor(VIOLET)
-    .text(title, x, y);
-  doc
-    .moveTo(x, y + 14)
-    .lineTo(x + 520, y + 14)
-    .lineWidth(0.8)
-    .strokeColor(SOFT)
-    .stroke();
-}
-
-let _lastBlockHeight = 0;
-function blockHeight() { return _lastBlockHeight; }
-function drawSectionBlock(doc, title, text, x, y) {
-  drawSectionTitle(doc, title, x, y);
-  const top = y + 18;
-  const h = doc.heightOfString(text || "—", { width: 520, align: "justify" }) + 14;
-  doc
-    .roundedRect(x, top, 520, h, 8)
-    .fillAndStroke("#fff", "#eae7ff");
-  doc
-    .fillColor("#111").font("Helvetica").fontSize(10)
-    .text(text || "—", x + 10, top + 8, { width: 500, align: "justify" });
-  _lastBlockHeight = h + 26;
-}
-
-function drawOdontogram(doc, x, y, teethSet) {
-  const gap = 6;
-  const boxW = 28, boxH = 24;
-  const rows = [
-    [18, 17, 16, 15, 14, 13, 12, 11],
-    [21, 22, 23, 24, 25, 26, 27, 28],
-    [48, 47, 46, 45, 44, 43, 42, 41],
-    [31, 32, 33, 34, 35, 36, 37, 38],
-  ];
-  doc.fontSize(9);
-  for (let r = 0; r < rows.length; r++) {
-    let cx = x;
-    let cy = y + r * (boxH + gap);
-    for (const n of rows[r]) {
-      const t = String(n);
-      const marked = teethSet.has(t);
-      doc
-        .roundedRect(cx, cy, boxW, boxH, 5)
-        .fillAndStroke(marked ? SOFT : "#fff", VIOLET);
-      doc
-        .fillColor("#555")
-        .text(String(n), cx + 8, cy + boxH / 2 - 5);
-      cx += boxW + gap;
-    }
-  }
-  // nota
-  const bottom = y + rows.length * (boxH + gap) + 8;
-  doc
-    .moveTo(x, bottom)
-    .lineTo(x + 520, bottom)
-    .lineWidth(0.6)
-    .strokeColor("#e9e9e9")
-    .stroke();
-  doc
-    .font("Helvetica").fontSize(9).fillColor("#666")
-    .text(
-      "Cuadros resaltados indican dientes con procedimientos registrados (según odontograma o facturación).",
-      x, bottom + 6
-    );
-  return bottom + 22;
 }
