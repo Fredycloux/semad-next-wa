@@ -20,10 +20,10 @@ const ageFrom = (birth) => {
 };
 const normSurf = (s = "") => {
   s = String(s).toUpperCase();
-  if (["B","V","VESTIBULAR","TOP","T"].includes(s)) return "B";
-  if (["L","P","PALATINO","LINGUAL","BOT","BOTTOM"].includes(s)) return "L";
-  if (["M","MESIAL","LEFT","IZQ"].includes(s)) return "M";
-  if (["D","DISTAL","RIGHT","DER"].includes(s)) return "D";
+  if (["B", "V", "VESTIBULAR", "TOP", "T"].includes(s)) return "B";
+  if (["L", "P", "PALATINO", "LINGUAL", "BOT", "BOTTOM"].includes(s)) return "L";
+  if (["M", "MESIAL", "LEFT", "IZQ"].includes(s)) return "M";
+  if (["D", "DISTAL", "RIGHT", "DER"].includes(s)) return "D";
   return "O";
 };
 
@@ -56,7 +56,7 @@ function drawToothBox(doc, x, y, tooth, fills = {}, { W = 22, H = 18 } = {}) {
   paint(cx - sw / 2, cy - sh / 2, sw, sh, "O");                  // O
 
   doc.fillColor("#6b7280").font("Helvetica").fontSize(8)
-     .text(String(tooth), x, y + H + 2, { width: W, align: "center" });
+    .text(String(tooth), x, y + H + 2, { width: W, align: "center" });
   doc.restore();
 }
 
@@ -70,6 +70,7 @@ export async function historyPdfResponse(req, patientId) {
     where: { id: patientId },
     include: {
       odontogram: true,
+      toothConditions: true,
       consultations: { orderBy: { date: "desc" }, take: 1 },
       appointments: { orderBy: { date: "desc" }, take: 5 },
     },
@@ -119,13 +120,13 @@ export async function historyPdfResponse(req, patientId) {
       const buf = Buffer.from(await res.arrayBuffer());
       doc.image(buf, left, 18, { width: 120 });
     }
-  } catch {}
+  } catch { }
 
   // Título (bajado y con salto de línea controlado)
   doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(22)
-     .text("Reporte de Historia Clínica /", left + 140, 26, { width: width - 160 })
-     .moveDown(0.1)
-     .text("Odontograma", { continued: false });
+    .text("Reporte de Historia Clínica /", left + 140, 26, { width: width - 160 })
+    .moveDown(0.1)
+    .text("Odontograma", { continued: false });
 
   /* Tarjetas */
   const titleBottom = doc.y;               // fin real del título
@@ -140,10 +141,10 @@ export async function historyPdfResponse(req, patientId) {
   const L1 = left + 12;
   const label = (lab, y) => doc.font("Helvetica-Bold").fontSize(11).fillColor("#000").text(`${lab}:`, L1, y);
   const value = (val, y) => doc.font("Helvetica").fontSize(11).text(val || "—", L1 + 100, y, { width: cardW - 122 });
-  label("Paciente",   cardY + 12); value(patient.fullName, cardY + 10);
-  label("Documento",  cardY + 30); value(patient.document,  cardY + 28);
-  label("Teléfono",   cardY + 48); value(patient.phone,     cardY + 46);
-  label("Email",      cardY + 66); value(patient.email,     cardY + 64);
+  label("Paciente", cardY + 12); value(patient.fullName, cardY + 10);
+  label("Documento", cardY + 30); value(patient.document, cardY + 28);
+  label("Teléfono", cardY + 48); value(patient.phone, cardY + 46);
+  label("Email", cardY + 66); value(patient.email, cardY + 64);
 
   // Fecha + Edad
   const rX = left + cardW + gap;
@@ -161,24 +162,24 @@ export async function historyPdfResponse(req, patientId) {
   doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14).text("Odontograma", left, y);
   y += 16;
 
-    // Adulto vs Niño (FDI)
+  // Adulto vs Niño (FDI)
   const dent = String(patient.dentition || "ADULT").toUpperCase();
   const rows =
     dent === "CHILD"
       ? [
-          // TOP infantil
-          ["55","54","53","52","51","61","62","63","64","65"],
-          // BOTTOM infantil
-          ["85","84","83","82","81","71","72","73","74","75"],
-        ]
+        // TOP infantil
+        ["55", "54", "53", "52", "51", "61", "62", "63", "64", "65"],
+        // BOTTOM infantil
+        ["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"],
+      ]
       : [
-          // TOP adulto
-          ["18","17","16","15","14","13","12","11","21","22","23","24","25","26","27","28"],
-          // BOTTOM adulto
-          ["48","47","46","45","44","43","42","41","31","32","33","34","35","36","37","38"],
-        ];
+        // TOP adulto
+        ["18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28"],
+        // BOTTOM adulto
+        ["48", "47", "46", "45", "44", "43", "42", "41", "31", "32", "33", "34", "35", "36", "37", "38"],
+      ];
 
- // Tamaños y espaciados (un poco más compacto para centrar mejor)
+  // Tamaños y espaciados (un poco más compacto para centrar mejor)
   const stepX = 28;                 // separación horizontal
   const stepY = 40;                 // separación vertical
   const boxSize = { W: 22, H: 18 }; // tamaño de cada “diente”
@@ -203,7 +204,46 @@ export async function historyPdfResponse(req, patientId) {
     });
   });
 
-  y += rows.length * stepY + 14; // margen inferior del bloque
+  y += rows.length * stepY + 14;
+
+  // Examen Periodontal
+  if (patient.periodontalExam) {
+    y += 10;
+    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14).text("Examen Periodontal", left, y);
+    y += 18;
+    doc.font("Helvetica").fontSize(10).fillColor("#000");
+    const h = doc.heightOfString(patient.periodontalExam, { width: width }) + 8;
+    doc.text(patient.periodontalExam, left, y, { width: width });
+    y += h + 8;
+  }
+
+  // Tooth Conditions (Vestibular, Lingual, Movilidad)
+  if (patient.toothConditions?.length > 0) {
+    y += 8;
+    doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14).text("Condiciones por Diente (Examen Periodontal)", left, y);
+    y += 18;
+
+    doc.fillColor("#000").font("Helvetica-Bold").fontSize(9);
+    doc.text("Diente", left, y, { width: 50 });
+    doc.text("Vestibular", left + 60, y, { width: 80 });
+    doc.text("Palatino/Lingual", left + 150, y, { width: 100 });
+    doc.text("Movilidad", left + 260, y, { width: 80 });
+    y += 14;
+
+    doc.font("Helvetica").fontSize(9);
+    for (const c of patient.toothConditions.sort((a, b) => Number(a.tooth) - Number(b.tooth))) {
+      if (c.vestibular || c.lingual || c.mobility) {
+        doc.text(c.tooth, left, y, { width: 50 });
+        doc.text(c.vestibular || "-", left + 60, y, { width: 80 });
+        doc.text(c.lingual || "-", left + 150, y, { width: 100 });
+        doc.text(c.mobility || "-", left + 260, y, { width: 80 });
+        y += 12;
+      }
+    }
+  }
+
+  y += 14;
+
   doc.moveTo(left, y).lineTo(right, y).strokeColor(SLATE_200).lineWidth(1).stroke();
   y += 12;
 
@@ -232,7 +272,7 @@ export async function historyPdfResponse(req, patientId) {
 
   /* Procedimientos por diente */
   doc.fillColor(VIOLET).font("Helvetica-Bold").fontSize(14)
-     .text("Procedimientos por diente (según facturación)", left, doc.y);
+    .text("Procedimientos por diente (según facturación)", left, doc.y);
   doc.moveDown(0.4);
   doc.font("Helvetica").fillColor("#000").fontSize(11);
   const entries = [...procsByTooth.entries()].sort((a, b) => Number(a[0]) - Number(b[0]));

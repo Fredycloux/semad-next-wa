@@ -2,11 +2,27 @@
 import { prisma } from "@/lib/prisma";
 
 export async function GET(_req, { params }) {
+  const patientId = params.patientId;
   const entries = await prisma.odontogramEntry.findMany({
-    where: { patientId: params.patientId },
+    where: { patientId },
     orderBy: { createdAt: "asc" },
   });
-  return Response.json({ ok: true, entries });
+
+  const conditions = await prisma.toothCondition.findMany({
+    where: { patientId },
+  });
+
+  const patient = await prisma.patient.findUnique({
+    where: { id: patientId },
+    select: { periodontalExam: true },
+  });
+
+  return Response.json({
+    ok: true,
+    entries,
+    toothConditions: conditions,
+    periodontalExam: patient?.periodontalExam
+  });
 }
 
 export async function POST(req, { params }) {
