@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AddDentist() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -18,7 +20,7 @@ export default function AddDentist() {
     setBusy(false);
     if (res.ok) {
       setName("");
-      location.reload(); // recarga suave
+      router.refresh();
     } else {
       const j = await res.json().catch(() => ({}));
       alert("Error al crear: " + (j.error || res.statusText));

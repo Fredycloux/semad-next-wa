@@ -1,5 +1,9 @@
 // src/app/api/admin/patients/[id]/route.js
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^\+?[\d\s\-().]{7,20}$/;
 
 function parseDOB(v) {
   if (!v) return null;
@@ -17,8 +21,25 @@ function parseDOB(v) {
 const VALID_SEX = new Set(["MALE", "FEMALE", "OTHER"]);
 
 async function updatePatient(req, { params }) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const body = await req.json();
+
+    // Validación de formato
+    if (body.email && !EMAIL_RE.test(body.email)) {
+      return Response.json(
+        { ok: false, error: "El correo electrónico no tiene un formato válido" },
+        { status: 400 }
+      );
+    }
+    if (body.phone && !PHONE_RE.test(body.phone)) {
+      return Response.json(
+        { ok: false, error: "El teléfono no tiene un formato válido" },
+        { status: 400 }
+      );
+    }
 
     // Construcción "parcial": solo campos presentes en el body
     const upd = {};

@@ -1,6 +1,6 @@
 // /src/app/api/admin/create-appointment/route.js
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
 // Importa las funciones de recordatorio
 import {
@@ -9,6 +9,9 @@ import {
   buildWhatsAppMessage,
   buildEmailTemplate,
 } from "../../../../lib/reminders";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^\+?[\d\s\-().]{7,20}$/;
 
 function to24h(t) {
   if (!t) return null;
@@ -24,6 +27,9 @@ function to24h(t) {
 }
 
 export async function POST(req) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const body = await req.json();
 
@@ -43,52 +49,68 @@ export async function POST(req) {
       );
     }
 
+    if (email && !EMAIL_RE.test(email)) {
+      return Response.json(
+        { ok: false, error: "El correo electrónico no tiene un formato válido" },
+        { status: 400 }
+      );
+    }
+
+    if (phone && !PHONE_RE.test(phone)) {
+      return Response.json(
+        { ok: false, error: "El teléfono no tiene un formato válido" },
+        { status: 400 }
+      );
+    }
+
     // Combinar fecha y hora
     const when = new Date(`${dateStr}T${timeStr}:00`);
 
-    // === Buscar o crear/actualizar paciente ===
-    let dbPatient = await prisma.patient.findFirst({
-      where: {
-        OR: [
-          document ? { document } : undefined,
-          phone ? { phone } : undefined,
-        ].filter(Boolean),
-      },
-      select: { id: true },
-    });
-
-    if (!dbPatient) {
-      dbPatient = await prisma.patient.create({
-        data: {
-          fullName: patient,
-          phone: phone || null,
-          document: document || null,
-          email: email || null,
+    // === Buscar o crear/actualizar paciente + crear cita en una transacción ===
+    const { appt } = await prisma.$transaction(async (tx) => {
+      let dbPatient = await tx.patient.findFirst({
+        where: {
+          OR: [
+            document ? { document } : undefined,
+            phone ? { phone } : undefined,
+          ].filter(Boolean),
         },
         select: { id: true },
       });
-    } else {
-      // Actualiza datos básicos por si cambiaron
-      await prisma.patient.update({
-        where: { id: dbPatient.id },
-        data: {
-          fullName: patient,
-          phone: phone || null,
-          document: document || null,
-          email: email || null,
-        },
-      });
-    }
 
-    // === Crear la cita conectando al paciente ===
-    const appt = await prisma.appointment.create({
-      data: {
-        date: when,
-        reason,
-        dentist: dentist || null,
-        patient: { connect: { id: dbPatient.id } },
-      },
-      select: { id: true },
+      if (!dbPatient) {
+        dbPatient = await tx.patient.create({
+          data: {
+            fullName: patient,
+            phone: phone || null,
+            document: document || null,
+            email: email || null,
+          },
+          select: { id: true },
+        });
+      } else {
+        await tx.patient.update({
+          where: { id: dbPatient.id },
+          data: {
+            fullName: patient,
+            phone: phone || null,
+            document: document || null,
+            email: email || null,
+          },
+        });
+      }
+
+      const appt = await tx.appointment.create({
+        data: {
+          date: when,
+          reason,
+          dentist: dentist || null,
+          patient: { connect: { id: dbPatient.id } },
+        },
+        select: { id: true },
+      });
+
+      return { appt };
     });
 
     // === Enviar recordatorios al paciente ===
