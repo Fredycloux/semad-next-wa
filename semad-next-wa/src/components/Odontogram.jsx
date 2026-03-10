@@ -12,6 +12,26 @@ const CHILD_BOTTOM = ["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"
 // superficies (en BD usamos O, M, D, B, L)
 const SURFACES = ["O", "M", "D", "B", "L"];
 
+// Valores estándar para los selectores de condición
+const PERIO_OPTS = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const MOBILITY_OPTS = ["", "0", "1", "2", "3"];
+
+function CondSelect({ placeholder, value, onChange }) {
+  const opts = placeholder === "Movilidad" ? MOBILITY_OPTS : PERIO_OPTS;
+  return (
+    <select
+      title={placeholder}
+      value={value || ""}
+      onChange={e => onChange(e.target.value)}
+      className="w-full text-center text-[10px] border rounded bg-white cursor-pointer"
+    >
+      {opts.map(o => (
+        <option key={o} value={o}>{o === "" ? placeholder : o}</option>
+      ))}
+    </select>
+  );
+}
+
 export default function Odontogram({ patientId, initialDentition = "ADULT", entries = [] }) {
   const [dentition, setDentition] = useState(initialDentition === "CHILD" ? "CHILD" : "ADULT");
   const [label, setLabel] = useState(LABELS[0]);
@@ -257,18 +277,15 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
 
                       {isTop && (
                         <div className="space-y-1">
-                          <input type="text" placeholder="Vestibular" title="Vestibular"
-                            className="w-full text-center text-[10px] border rounded bg-white"
-                            value={conditions.get(t)?.vestibular || ""}
-                            onChange={e => updateCondition(t, "vestibular", e.target.value)} />
-                          <input type="text" placeholder="Palatino" title="Palatino"
-                            className="w-full text-center text-[10px] border rounded bg-white"
-                            value={conditions.get(t)?.lingual || ""}
-                            onChange={e => updateCondition(t, "lingual", e.target.value)} />
-                          <input type="text" placeholder="Movilidad" title="Movilidad"
-                            className="w-full text-center text-[10px] border rounded bg-white"
-                            value={conditions.get(t)?.mobility || ""}
-                            onChange={e => updateCondition(t, "mobility", e.target.value)} />
+                          <CondSelect placeholder="Vestibular"
+                            value={conditions.get(t)?.vestibular}
+                            onChange={v => updateCondition(t, "vestibular", v)} />
+                          <CondSelect placeholder="Palatino"
+                            value={conditions.get(t)?.lingual}
+                            onChange={v => updateCondition(t, "lingual", v)} />
+                          <CondSelect placeholder="Movilidad"
+                            value={conditions.get(t)?.mobility}
+                            onChange={v => updateCondition(t, "mobility", v)} />
                         </div>
                       )}
 
@@ -278,18 +295,15 @@ export default function Odontogram({ patientId, initialDentition = "ADULT", entr
 
                       {!isTop && (
                         <div className="space-y-1">
-                          <input type="text" placeholder="Lingual" title="Lingual"
-                            className="w-full text-center text-[10px] border rounded bg-white"
-                            value={conditions.get(t)?.lingual || ""}
-                            onChange={e => updateCondition(t, "lingual", e.target.value)} />
-                          <input type="text" placeholder="Vestibular" title="Vestibular"
-                            className="w-full text-center text-[10px] border rounded bg-white"
-                            value={conditions.get(t)?.vestibular || ""}
-                            onChange={e => updateCondition(t, "vestibular", e.target.value)} />
-                          <input type="text" placeholder="Movilidad" title="Movilidad"
-                            className="w-full text-center text-[10px] border rounded bg-white"
-                            value={conditions.get(t)?.mobility || ""}
-                            onChange={e => updateCondition(t, "mobility", e.target.value)} />
+                          <CondSelect placeholder="Lingual"
+                            value={conditions.get(t)?.lingual}
+                            onChange={v => updateCondition(t, "lingual", v)} />
+                          <CondSelect placeholder="Vestibular"
+                            value={conditions.get(t)?.vestibular}
+                            onChange={v => updateCondition(t, "vestibular", v)} />
+                          <CondSelect placeholder="Movilidad"
+                            value={conditions.get(t)?.mobility}
+                            onChange={v => updateCondition(t, "mobility", v)} />
                         </div>
                       )}
                     </div>
