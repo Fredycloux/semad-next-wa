@@ -3,9 +3,22 @@ import { useEffect, useMemo, useState } from "react";
 
 function fmt(n){ return new Intl.NumberFormat("es-CO").format(Number(n||0)); }
 
+function SkeletonRow() {
+  return (
+    <tr className="border-t animate-pulse">
+      {[...Array(8)].map((_, i) => (
+        <td key={i} className="p-2">
+          <div className="h-4 bg-gray-200 rounded w-full" />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
 export default function InventoryPage(){
   const [q, setQ] = useState("");
   const [items, setItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(true);
   const [lowOnly, setLowOnly] = useState(false);
 
   const [form, setForm] = useState({ name:"", sku:"", category:"", unit:"", minStock:0, note:"" });
@@ -15,11 +28,16 @@ export default function InventoryPage(){
 
   // cargar items
   async function load(){
-    const u = new URL("/api/admin/inventory/items", location.origin);
-    if (q.trim()) u.searchParams.set("q", q.trim());
-    if (lowOnly) u.searchParams.set("low", "1");
-    const j = await fetch(u).then(r=>r.json());
-    setItems(j.items || []);
+    setLoadingItems(true);
+    try {
+      const u = new URL("/api/admin/inventory/items", location.origin);
+      if (q.trim()) u.searchParams.set("q", q.trim());
+      if (lowOnly) u.searchParams.set("low", "1");
+      const j = await fetch(u).then(r=>r.json());
+      setItems(j.items || []);
+    } finally {
+      setLoadingItems(false);
+    }
   }
   useEffect(()=>{ const t=setTimeout(load, 250); return ()=>clearTimeout(t); }, [q, lowOnly]);
 
@@ -129,7 +147,11 @@ export default function InventoryPage(){
             </tr>
           </thead>
           <tbody>
-            {items.map(it=>(
+            {loadingItems ? (
+              [...Array(4)].map((_, i) => <SkeletonRow key={i} />)
+            ) : items.length === 0 ? (
+              <tr><td className="p-3 text-sm text-gray-500" colSpan={8}>Sin resultados</td></tr>
+            ) : items.map(it=>(
               <tr key={it.id} className="border-t">
                 <td className="p-2">
                   <div className="font-medium">{it.name}</div>
@@ -152,9 +174,6 @@ export default function InventoryPage(){
                 </td>
               </tr>
             ))}
-            {items.length===0 && (
-              <tr><td className="p-3 text-sm text-gray-500" colSpan={8}>Sin resultados</td></tr>
-            )}
           </tbody>
         </table>
       </section>
@@ -199,30 +218,50 @@ export default function InventoryPage(){
 
 function RecentMovements(){
   const [rows, setRows] = useState([]);
-  useEffect(()=>{ fetch("/api/admin/inventory/movements?limit=20").then(r=>r.json()).then(j=>setRows(j.items||[])); },[]);
+  const [loading, setLoading] = useState(true);
+  useEffect(()=>{
+    fetch("/api/admin/inventory/movements?limit=20")
+      .then(r=>r.json())
+      .then(j=>setRows(j.items||[]))
+      .finally(()=>setLoading(false));
+  },[]);
   const fmt = (n)=> new Intl.NumberFormat("es-CO").format(Number(n||0));
   const label = (t)=> ({PURCHASE:"Compra", USE:"Uso", ADJUSTMENT:"Ajuste", WASTE:"Merma", RETURN:"Devolución"}[t]||t);
   return (
     <section className="rounded-xl border p-4 space-y-2">
       <div className="font-medium">Movimientos recientes</div>
-      <ul className="text-sm divide-y">
-        {rows.map(m=>(
-          <li key={m.id} className="py-2 flex items-center justify-between">
-            <div>
-              <div className="font-medium">{m.item?.name || "—"}</div>
-              <div className="text-gray-600">
-                {label(m.type)} · {new Date(m.createdAt).toLocaleString()} {m.ref?`· Ref: ${m.ref}`:""}
+      {loading ? (
+        <ul className="text-sm divide-y animate-pulse">
+          {[...Array(4)].map((_, i) => (
+            <li key={i} className="py-3 flex items-center justify-between gap-4">
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-gray-200 rounded w-1/3" />
+                <div className="h-3 bg-gray-200 rounded w-1/2" />
               </div>
-              {m.note ? <div className="text-gray-600">{m.note}</div> : null}
-            </div>
-            <div className={`font-semibold ${m.quantity>=0?"text-green-700":"text-red-700"}`}>
-              {m.quantity>=0 ? `+${m.quantity}` : m.quantity}
-              {m.unitCost ? <div className="text-right text-xs text-gray-600">$ {fmt(m.unitCost)}</div> : null}
-            </div>
-          </li>
-        ))}
-        {rows.length===0 && <li className="py-2 text-gray-500">Sin movimientos aún.</li>}
-      </ul>
+              <div className="h-4 bg-gray-200 rounded w-12" />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="text-sm divide-y">
+          {rows.map(m=>(
+            <li key={m.id} className="py-2 flex items-center justify-between">
+              <div>
+                <div className="font-medium">{m.item?.name || "—"}</div>
+                <div className="text-gray-600">
+                  {label(m.type)} · {new Date(m.createdAt).toLocaleString()} {m.ref?`· Ref: ${m.ref}`:""}
+                </div>
+                {m.note ? <div className="text-gray-600">{m.note}</div> : null}
+              </div>
+              <div className={`font-semibold ${m.quantity>=0?"text-green-700":"text-red-700"}`}>
+                {m.quantity>=0 ? `+${m.quantity}` : m.quantity}
+                {m.unitCost ? <div className="text-right text-xs text-gray-600">$ {fmt(m.unitCost)}</div> : null}
+              </div>
+            </li>
+          ))}
+          {rows.length===0 && <li className="py-2 text-gray-500">Sin movimientos aún.</li>}
+        </ul>
+      )}
     </section>
   );
 }

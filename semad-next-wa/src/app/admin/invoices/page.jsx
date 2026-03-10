@@ -19,6 +19,17 @@ export default function InvoicesPage() {
   const [saving, setSaving] = useState(false);
 
   const [recent, setRecent] = useState([]);
+  const [invoicePage, setInvoicePage] = useState(1);
+  const [invoiceTotal, setInvoiceTotal] = useState(0);
+  const INVOICE_LIMIT = 10;
+
+  async function loadInvoices(page = 1, append = false) {
+    const j = await fetch(`/api/admin/invoices?page=${page}&limit=${INVOICE_LIMIT}`)
+      .then((r) => r.json());
+    const items = j.items || [];
+    setRecent((prev) => append ? [...prev, ...items] : items);
+    setInvoiceTotal(j.pagination?.total || 0);
+  }
 
   // carga procedimientos y facturas recientes
   useEffect(() => {
@@ -28,9 +39,7 @@ export default function InvoicesPage() {
         const arr = (j.items || []).filter((p) => p.active !== false);
         setProcedures(arr);
       });
-    fetch("/api/admin/invoices")
-      .then((r) => r.json())
-      .then((j) => setRecent(j.items || []));
+    loadInvoices(1);
   }, []);
 
   // buscar paciente
@@ -315,63 +324,80 @@ export default function InvoicesPage() {
       {/* Recientes */}
       <section className="rounded-xl border p-4 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="font-medium">Facturas recientes</div>
+          <div className="font-medium">
+            Facturas recientes
+            {invoiceTotal > 0 && (
+              <span className="ml-2 text-xs text-gray-500 font-normal">({invoiceTotal} total)</span>
+            )}
+          </div>
         </div>
 
         {recent.length === 0 ? (
           <div className="text-sm text-gray-500">Aún no hay facturas.</div>
         ) : (
-          <ul className="text-sm divide-y">
-            {recent.slice(0, 10).map((f) => (
-              <li key={f.id} className="py-2 flex items-center justify-between">
-                <a
-                  href={`/admin/invoices/${f.id}`}
-                  className="group flex-1 min-w-0"
-                  title="Abrir detalle"
-                >
-                  <div className="font-medium group-hover:underline truncate">
-                    {new Date(f.date).toLocaleString()}
-                  </div>
-                  <div className="text-gray-600 truncate">
-                    {f.patient?.fullName || "—"}
-                    {f.patient?.document ? ` · ${f.patient.document}` : ""}
-                  </div>
-                </a>
-
-                <div className="flex items-center gap-3 pl-3">
-                  <div className="font-semibold whitespace-nowrap">
-                    $ {fmt(f.total || f.items?.reduce?.((s, it) => s + (it.subtotal || 0), 0))}
-                  </div>
+          <>
+            <ul className="text-sm divide-y">
+              {recent.map((f) => (
+                <li key={f.id} className="py-2 flex items-center justify-between">
                   <a
                     href={`/admin/invoices/${f.id}`}
-                    //className="rounded-md bg-violet-600 px-3 py-1.5 text-white text-xs hover:opacity-95"
-                    className="text-sm text-violet-700 hover:underline"
+                    className="group flex-1 min-w-0"
+                    title="Abrir detalle"
                   >
-                    Ver
+                    <div className="font-medium group-hover:underline truncate">
+                      {new Date(f.date).toLocaleString()}
+                    </div>
+                    <div className="text-gray-600 truncate">
+                      {f.patient?.fullName || "—"}
+                      {f.patient?.document ? ` · ${f.patient.document}` : ""}
+                    </div>
                   </a>
 
-                  {/* 👇 Nuevo: eliminar factura */}
-                  <ConfirmDeleteButton
-                    label="Eliminar"
-                    confirmingLabel="Eliminando..."
-                    confirmText="¿Eliminar esta factura? Esta acción no se puede deshacer."
-                    onDelete={async () => {
-                      const res = await fetch(`/api/admin/invoices/${f.id}`, { method: "DELETE" });
-                      let ok = res.ok;
-                      try {
-                        const j = await res.json();
-                        if (j?.ok === false) ok = false;
-                      } catch {/* ignore non-JSON */}
-                      if (!ok) throw new Error("No se pudo eliminar");
-                  
-                      // 🔥 Actualiza la UI inmediato, sin refrescar la página:
-                      setRecent(prev => prev.filter(x => x.id !== f.id));
-                    }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+                  <div className="flex items-center gap-3 pl-3">
+                    <div className="font-semibold whitespace-nowrap">
+                      $ {fmt(f.total || f.items?.reduce?.((s, it) => s + (it.subtotal || 0), 0))}
+                    </div>
+                    <a
+                      href={`/admin/invoices/${f.id}`}
+                      className="text-sm text-violet-700 hover:underline"
+                    >
+                      Ver
+                    </a>
+
+                    <ConfirmDeleteButton
+                      label="Eliminar"
+                      confirmingLabel="Eliminando..."
+                      confirmText="¿Eliminar esta factura? Esta acción no se puede deshacer."
+                      onDelete={async () => {
+                        const res = await fetch(`/api/admin/invoices/${f.id}`, { method: "DELETE" });
+                        let ok = res.ok;
+                        try {
+                          const j = await res.json();
+                          if (j?.ok === false) ok = false;
+                        } catch {/* ignore non-JSON */}
+                        if (!ok) throw new Error("No se pudo eliminar");
+                        setRecent(prev => prev.filter(x => x.id !== f.id));
+                        setInvoiceTotal(prev => prev - 1);
+                      }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {recent.length < invoiceTotal && (
+              <button
+                onClick={() => {
+                  const next = invoicePage + 1;
+                  setInvoicePage(next);
+                  loadInvoices(next, true);
+                }}
+                className="w-full mt-2 py-2 text-sm text-violet-700 hover:underline border rounded-lg"
+              >
+                Ver más ({invoiceTotal - recent.length} restantes)
+              </button>
+            )}
+          </>
         )}
       </section>
     </div>

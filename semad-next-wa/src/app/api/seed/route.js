@@ -1,10 +1,12 @@
 // src/app/api/seed/route.js
-import { PrismaClient } from '@prisma/client';
+import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth";
 import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
+export async function GET(req) {
+  const denied = await requireRole(["ADMIN"]);
+  if (denied) return denied;
 
-export async function GET() {
   try {
     // Usuarios demo
     const users = [

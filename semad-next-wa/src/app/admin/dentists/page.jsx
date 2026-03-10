@@ -1,10 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import AddDentist from "@/components/AddDentist";
 import DentistRow from "@/components/DentistRow";
 
 export const metadata = { title: "Odontólogos | SEMAD" };
-
-const prisma = new PrismaClient();
 
 export default async function DentistsPage() {
   const dentists = await prisma.dentist.findMany({

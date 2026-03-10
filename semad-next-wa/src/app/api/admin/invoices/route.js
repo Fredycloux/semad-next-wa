@@ -26,16 +26,31 @@ async function nextFolio() {
   });
 }
 
-// Listado para “recientes”
-export async function GET() {
-  const items = await prisma.invoice.findMany({
-    orderBy: { date: "desc" },
-    include: {
-      patient: { select: { fullName: true, document: true } },
-      items: true,
-    },
+// Listado para “recientes” con paginación: ?page=1&limit=10
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
+  const page  = Math.max(1, parseInt(searchParams.get(“page”) || “1”, 10));
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get(“limit”) || “10”, 10)));
+  const skip  = (page - 1) * limit;
+
+  const [items, total] = await Promise.all([
+    prisma.invoice.findMany({
+      orderBy: { date: “desc” },
+      skip,
+      take: limit,
+      include: {
+        patient: { select: { fullName: true, document: true } },
+        items: true,
+      },
+    }),
+    prisma.invoice.count(),
+  ]);
+
+  return Response.json({
+    ok: true,
+    items,
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
-  return Response.json({ ok: true, items });
 }
 
 // Crear factura con: validación, precios, total y folio

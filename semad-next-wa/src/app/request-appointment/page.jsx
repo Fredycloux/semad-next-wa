@@ -18,11 +18,13 @@ export default function RequestAppointmentPage() {
   const [email, setEmail] = useState("");
   const [reason, setReason] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
     try {
       const res = await fetch("/api/request-appointment", {
         method: "POST",
@@ -43,6 +45,8 @@ export default function RequestAppointmentPage() {
       }
     } catch (e) {
       setError("Error al enviar solicitud");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,9 +123,10 @@ export default function RequestAppointmentPage() {
         />
         <button
           type="submit"
-          className="rounded-md bg-violet-600 text-white px-4 py-2"
+          disabled={loading}
+          className="rounded-md bg-violet-600 text-white px-4 py-2 disabled:opacity-60"
         >
-          Enviar solicitud
+          {loading ? "Enviando..." : "Enviar solicitud"}
         </button>
       </form>
       <button
